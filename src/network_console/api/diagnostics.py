@@ -1,12 +1,13 @@
 """诊断工具箱：ping / traceroute / HTTP 头分解 / DNS 解析。
 
 - 能力探测（``probe_tools``）在首次调用时检查各命令是否在 PATH，结果缓存到进程内存。
-- 每个工具返回统一结构：``{ok, tool, target, summary, detail, raw}``。
-- 所有命令走 ``core.platform_macos``（白名单 + 超时），超时上限统一 ``config.DIAG_TIMEOUT``。
+- 每个工具返回统一结构：``{ok, tool, target, summary, detail, raw}``，异常时附带 ``warning`` 码。
+- 所有命令走 ``core.platform_macos``（白名单 + 超时），超时按工具区分（``config.TOOL_TIMEOUTS``）。
 """
 
 from __future__ import annotations
 
+import ipaddress
 import re
 import shutil
 from typing import Dict, List, Optional
@@ -27,6 +28,21 @@ _PING_RTT = re.compile(
     r"round-trip min/avg/max/stddev = ([\d.]+)/([\d.]+)/([\d.]+)/([\d.]+)"
 )
 
+# 代理 fake-ip 保留段（RFC 2544 的 198.18/15 + 保留的 240/4）
+_FAKE_IP_NETWORKS = [
+    ipaddress.ip_network("198.18.0.0/15"),
+    ipaddress.ip_network("240.0.0.0/4"),
+]
+
+
+def is_fake_ip(value: str) -> bool:
+    """判断字符串是否落在代理 fake-ip 保留段（非 IP 一律 False）。"""
+    try:
+        ip = ipaddress.ip_address(value)
+    except ValueError:
+        return False
+    return any(ip in net for net in _FAKE_IP_NETWORKS)
+
 
 def probe_tools() -> Dict[str, bool]:
     """检查诊断命令是否可用，结果缓存（启动后只探一次）。"""
@@ -37,8 +53,8 @@ def probe_tools() -> Dict[str, bool]:
 
 
 def get_tools() -> Dict:
-    """能力探测接口：返回 {ping:true, traceroute:true, ...}。"""
-    return {"ok": True, "tools": probe_tools()}
+    """能力探测接口：返回工具可用性 + 每工具超时（前端据此设 AbortController 上限）。"""
+    return {"ok": True, "tools": probe_tools(), "timeouts": config.TOOL_TIMEOUTS}
 
 
 # ---------- 纯解析函数（可单测） ----------
@@ -115,8 +131,10 @@ def parse_curl_timing(text: str) -> Dict:
 # ---------- 工具执行 ----------
 
 def _run_ping(target: str) -> Dict:
+    timeout = config.TOOL_TIMEOUTS.get("ping", config.DIAG_TIMEOUT)
     res = platform_macos.ping_diag(
-        target, count=config.PING_COUNT, interval=config.PING_INTERVAL, timeout_ms=config.PING_TIMEOUT_MS
+        target, count=config.PING_COUNT, interval=config.PING_INTERVAL,
+        timeout_ms=config.PING_TIMEOUT_MS, timeout=timeout,
     )
     stats = parse_ping(res.value)
     loss = stats.get("loss")
@@ -129,14 +147,20 @@ def _run_ping(target: str) -> Dict:
 
 
 def _run_traceroute(target: str) -> Dict:
-    res = platform_macos.traceroute_diag(target, max_hops=config.TRACEROUTE_MAX_HOPS)
+    timeout = config.TOOL_TIMEOUTS.get("traceroute", config.TRACEROUTE_TIMEOUT)
+    res = platform_macos.traceroute_diag(target, max_hops=config.TRACEROUTE_MAX_HOPS, timeout=timeout)
     hops = parse_traceroute(res.value)
     summary = "共 %d 跳" % len(hops) if hops else "无结果"
-    return {"ok": bool(hops), "tool": "traceroute", "target": target, "summary": summary, "detail": {"hops": hops}, "raw": res.value}
+    result = {"ok": bool(hops), "tool": "traceroute", "target": target, "summary": summary, "detail": {"hops": hops}, "raw": res.value}
+    # 所有跳点都超时（TUN 代理拦截 ICMP 的典型表现）→ 提示
+    if hops and all(not h["addr"] for h in hops):
+        result["warning"] = "all_hops_timeout"
+    return result
 
 
 def _run_http(target: str) -> Dict:
-    res = platform_macos.curl_timing(target, max_time=int(config.DIAG_TIMEOUT))
+    timeout = config.TOOL_TIMEOUTS.get("http", config.DIAG_TIMEOUT)
+    res = platform_macos.curl_timing(target, max_time=int(timeout), timeout=timeout)
     parsed = parse_curl_timing(res.value)
     timing = parsed["timing"]
     status = parsed["status"]
@@ -148,14 +172,19 @@ def _run_http(target: str) -> Dict:
 
 
 def _run_dns(target: str) -> Dict:
+    timeout = config.TOOL_TIMEOUTS.get("dns", config.DIAG_TIMEOUT)
     if probe_tools().get("dig"):
-        res = platform_macos.dig_lookup(target)
+        res = platform_macos.dig_lookup(target, timeout=timeout)
     else:
-        res = platform_macos.nslookup_host(target)
+        res = platform_macos.nslookup_host(target, timeout=timeout)
     records = [ln.strip() for ln in res.value.splitlines() if ln.strip()]
     ok = bool(records) and not res.error
     summary = "、".join(records[:8]) if records else "无记录"
-    return {"ok": ok, "tool": "dns", "target": target, "summary": summary, "detail": {"records": records}, "raw": res.value}
+    result = {"ok": ok, "tool": "dns", "target": target, "summary": summary, "detail": {"records": records}, "raw": res.value}
+    # 解析结果落在 fake-ip 段 → 提示（代理软件正常行为，非真实 IP）
+    if any(is_fake_ip(r) for r in records):
+        result["warning"] = "fake_ip"
+    return result
 
 
 _RUNNERS = {

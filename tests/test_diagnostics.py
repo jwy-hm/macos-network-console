@@ -99,12 +99,58 @@ def test_probe_tools_returns_all_keys():
 def test_run_ping_uses_bsd_flags(monkeypatch):
     captured = {}
 
-    def fake_ping(host, count=5, interval=0.2, timeout_ms=3000):
-        captured["args"] = (host, count, interval, timeout_ms)
+    def fake_ping(host, count=5, interval=0.2, timeout_ms=3000, timeout=None):
+        captured["args"] = (host, count, interval, timeout_ms, timeout)
         return Result(ok=True, value="5 packets transmitted, 5 packets received, 0.0% packet loss\nround-trip min/avg/max/stddev = 8.5/10.2/12.3/1.2 ms\n")
 
     monkeypatch.setattr("network_console.api.diagnostics.platform_macos.ping_diag", fake_ping)
     result = diagnostics.run_tool("ping", "8.8.8.8")
     assert result["ok"]
-    assert captured["args"] == ("8.8.8.8", 5, 0.2, 3000)
+    assert captured["args"] == ("8.8.8.8", 5, 0.2, 3000, 15)
     assert "0.0%" in result["summary"]
+
+
+def test_is_fake_ip():
+    assert diagnostics.is_fake_ip("198.18.0.5")
+    assert diagnostics.is_fake_ip("198.19.255.255")
+    assert diagnostics.is_fake_ip("240.1.2.3")
+    assert not diagnostics.is_fake_ip("8.8.8.8")
+    assert not diagnostics.is_fake_ip("192.168.1.1")
+    assert not diagnostics.is_fake_ip("example.com")
+
+
+def test_run_traceroute_all_hops_timeout_warning(monkeypatch):
+    def fake_tr(host, max_hops=20, timeout=None):
+        return Result(ok=False, value=" 1  *\n 2  *\n 3  *\n")
+
+    monkeypatch.setattr("network_console.api.diagnostics.platform_macos.traceroute_diag", fake_tr)
+    result = diagnostics.run_tool("traceroute", "8.8.8.8")
+    assert result["warning"] == "all_hops_timeout"
+
+
+def test_run_traceroute_no_warning_when_hops_resolve(monkeypatch):
+    def fake_tr(host, max_hops=20, timeout=None):
+        return Result(ok=True, value=" 1  192.168.1.1  2.1 ms\n 2  10.0.0.1  12.3 ms\n")
+
+    monkeypatch.setattr("network_console.api.diagnostics.platform_macos.traceroute_diag", fake_tr)
+    result = diagnostics.run_tool("traceroute", "8.8.8.8")
+    assert "warning" not in result
+
+
+def test_run_dns_fake_ip_warning(monkeypatch):
+    monkeypatch.setattr("network_console.api.diagnostics.probe_tools", lambda: {"dig": True})
+
+    def fake_dig(domain, timeout=None):
+        return Result(ok=True, value="198.18.0.160\n")
+
+    monkeypatch.setattr("network_console.api.diagnostics.platform_macos.dig_lookup", fake_dig)
+    result = diagnostics.run_tool("dns", "example.com")
+    assert result["warning"] == "fake_ip"
+
+
+def test_get_tools_returns_timeouts():
+    data = diagnostics.get_tools()
+    assert data["timeouts"]["ping"] == 15
+    assert data["timeouts"]["traceroute"] == 45
+    assert data["timeouts"]["http"] == 15
+    assert data["timeouts"]["dns"] == 10

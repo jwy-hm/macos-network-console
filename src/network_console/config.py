@@ -107,3 +107,10 @@ PING_TIMEOUT_MS = 3000
 
 # traceroute 参数：-w 每跳超时秒 / -q 每跳探测数 / -m 最大跳数
 TRACEROUTE_MAX_HOPS = 20
+
+# traceroute 单独超时（秒）：-w 2 × -m 20 最坏 40s，天生慢，不能套用普通 15s
+TRACEROUTE_TIMEOUT = float(os.environ.get("NETWORK_CONSOLE_TRACEROUTE_TIMEOUT", "45"))
+
+# 每工具超时（秒）：前端 AbortController 与后端 shell.run 共用此表，避免两处漂移。
+# 键名与诊断工具 id 一致（ping/traceroute/http/dns）。
+TOOL_TIMEOUTS = {"ping": 15, "traceroute": 45, "http": 15, "dns": 10}

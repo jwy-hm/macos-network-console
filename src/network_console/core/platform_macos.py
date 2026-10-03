@@ -91,19 +91,19 @@ def ping(host: str, count: int = 1, timeout_ms: int = 3000) -> Result:
     return shell.run(["ping", "-c", str(count), "-W", str(timeout_ms), host])
 
 
-def ping_diag(host: str, count: int = 5, interval: float = 0.2, timeout_ms: int = 3000) -> Result:
+def ping_diag(host: str, count: int = 5, interval: float = 0.2, timeout_ms: int = 3000, timeout: float | None = None) -> Result:
     """诊断用 ping：-c 次数 -i 间隔秒 -W 单包超时毫秒。"""
     return shell.run(
         ["ping", "-c", str(count), "-i", str(interval), "-W", str(timeout_ms), host],
-        timeout=config.DIAG_TIMEOUT,
+        timeout=timeout if timeout is not None else config.DIAG_TIMEOUT,
     )
 
 
-def traceroute_diag(host: str, max_hops: int = 20) -> Result:
+def traceroute_diag(host: str, max_hops: int = 20, timeout: float | None = None) -> Result:
     """诊断用 traceroute：-n 不反查 DNS、-w 每跳超时 2s、-q 每跳 1 次、-m 最大跳数。"""
     return shell.run(
         ["traceroute", "-n", "-w", "2", "-q", "1", "-m", str(max_hops), host],
-        timeout=config.DIAG_TIMEOUT,
+        timeout=timeout if timeout is not None else config.TRACEROUTE_TIMEOUT,
     )
 
 
@@ -114,7 +114,7 @@ def curl_http(url: str) -> Result:
     )
 
 
-def curl_timing(url: str, max_time: int = 15) -> Result:
+def curl_timing(url: str, max_time: int | None = None, timeout: float | None = None) -> Result:
     """HTTP 头 + 时间分解一次拿到：-D - 输出响应头，-w 输出各阶段耗时。"""
     wfmt = (
         "---TIMING---\\n"
@@ -124,21 +124,28 @@ def curl_timing(url: str, max_time: int = 15) -> Result:
         "starttransfer:%{time_starttransfer}\\n"
         "total:%{time_total}\\n"
     )
+    t = max_time if max_time is not None else int(config.DIAG_TIMEOUT)
     return shell.run(
         [
             "curl", "-sS", "-L", "--max-redirs", "5",
             "-o", "/dev/null", "-D", "-", "-w", wfmt,
-            "--max-time", str(max_time), url,
+            "--max-time", str(t), url,
         ],
-        timeout=config.DIAG_TIMEOUT,
+        timeout=timeout if timeout is not None else config.DIAG_TIMEOUT,
     )
 
 
-def dig_lookup(domain: str) -> Result:
+def dig_lookup(domain: str, timeout: float | None = None) -> Result:
     """DNS 解析（A 记录等）。"""
-    return shell.run(["dig", "+short", domain])
+    return shell.run(
+        ["dig", "+short", domain],
+        timeout=timeout if timeout is not None else config.DIAG_TIMEOUT,
+    )
 
 
-def nslookup_host(domain: str) -> Result:
+def nslookup_host(domain: str, timeout: float | None = None) -> Result:
     """DNS 解析（dig 不可用时的回退）。"""
-    return shell.run(["nslookup", domain])
+    return shell.run(
+        ["nslookup", domain],
+        timeout=timeout if timeout is not None else config.DIAG_TIMEOUT,
+    )
