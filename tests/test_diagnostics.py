@@ -78,6 +78,18 @@ def test_run_tool_missing_target():
     assert result["error"] == "缺少目标"
 
 
+def test_run_tool_rejects_option_injection():
+    result = diagnostics.run_tool("ping", "-c 5")
+    assert not result["ok"]
+    assert result["error"] == "非法目标"
+
+
+def test_run_http_rejects_non_http_scheme():
+    result = diagnostics.run_tool("http", "file:///etc/passwd")
+    assert not result["ok"]
+    assert "http/https" in result["error"]
+
+
 def test_probe_tools_returns_all_keys():
     tools = diagnostics.probe_tools()
     for key in ("ping", "traceroute", "curl", "dig", "nslookup", "openssl", "nc"):

@@ -85,8 +85,15 @@ def run(cmd: List[str], timeout: float = 10.0, sudo: bool = False) -> Result:
         )
     try:
         proc = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
-    except subprocess.TimeoutExpired:
-        return Result(ok=False, error="超时", hint="命令超过 %.0f 秒" % timeout)
+    except subprocess.TimeoutExpired as exc:
+        # 超时也要保留已产生的部分输出（如 traceroute 已走完的跳）。
+        # 注意：text=True 下超时时 stdout 仍是 bytes，需手动解码。
+        out = getattr(exc, "stdout", None)
+        if out is None:
+            out = getattr(exc, "output", None)
+        if isinstance(out, bytes):
+            out = out.decode("utf-8", errors="replace")
+        return Result(ok=False, value=out or "", error="超时", hint="命令超过 %.0f 秒" % timeout)
     except FileNotFoundError:
         return Result(ok=False, error="命令不存在", hint=_command_name(cmd))
     except OSError as exc:

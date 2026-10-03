@@ -47,6 +47,19 @@ def test_run_timeout(monkeypatch):
     assert "超时" in result.error
 
 
+def test_run_timeout_preserves_partial_output(monkeypatch):
+    def _fake(*args, **kwargs):
+        raise subprocess.TimeoutExpired(cmd=args[0], timeout=1, output=b"partial line\n")
+
+    monkeypatch.setattr("subprocess.run", _fake)
+    result = run(["traceroute", "8.8.8.8"], timeout=1)
+    assert not result.ok
+    assert "超时" in result.error
+    # 部分输出应被保留并解码为 str（供解析器继续使用）
+    assert isinstance(result.value, str)
+    assert "partial line" in result.value
+
+
 def test_run_nonzero_exit(monkeypatch):
     class _Done:
         returncode = 1

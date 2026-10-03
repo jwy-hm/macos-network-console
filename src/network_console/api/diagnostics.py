@@ -171,6 +171,12 @@ def run_tool(tool: str, target: str) -> Dict:
     target = (target or "").strip()
     if not target:
         return {"ok": False, "error": "缺少目标"}
+    # 防选项注入：target 以 "-" 开头会被 ping/traceroute/dig 当参数解析
+    if target.startswith("-"):
+        return {"ok": False, "error": "非法目标"}
+    # HTTP 工具只允许 http/https，避免 file:// 等 scheme 读取本地文件
+    if tool == "http" and not (target.startswith("http://") or target.startswith("https://")):
+        return {"ok": False, "error": "HTTP 工具仅支持 http/https"}
     runner = _RUNNERS.get(tool)
     if runner is None:
         return {"ok": False, "error": "未知工具：%s" % (tool or "?")}
