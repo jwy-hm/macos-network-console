@@ -42,6 +42,16 @@ def scutil_dns() -> Result:
     return shell.run(["scutil", "--dns"])
 
 
+def scutil_proxy() -> Result:
+    """系统代理设置（HTTPEnable / SOCKSEnable 等）。"""
+    return shell.run(["scutil", "--proxy"])
+
+
+def netstat_rn() -> Result:
+    """路由表。"""
+    return shell.run(["netstat", "-rn"])
+
+
 def networksetup_list_services() -> Result:
     """网络服务列表（Wi-Fi / 以太网等）。"""
     return shell.run(["networksetup", "-listallnetworkservices"])

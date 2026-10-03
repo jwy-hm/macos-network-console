@@ -16,22 +16,27 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 from typing import Optional
 
 from network_console import config
+from network_console.api import status as status_api
 
 WEB_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "web")
 
 SECURITY_HEADERS = {
     "Content-Security-Policy": (
         "default-src 'self'; script-src 'self' 'unsafe-inline'; "
-        "style-src 'self' 'unsafe-inline'; img-src 'self' data:"
+        "style-src 'self' 'unsafe-inline'; img-src 'self' data:; frame-ancestors 'none'"
     ),
     "X-Content-Type-Options": "nosniff",
     "Referrer-Policy": "no-referrer",
+    "X-Frame-Options": "DENY",
 }
 
 
 class Handler(BaseHTTPRequestHandler):
     protocol_version = "HTTP/1.1"
     server_version = "macos-network-console"
+    sys_version = ""
+    # CSRF token：进程启动时生成一次、全局唯一、多标签页共享。
+    # 勿在每次 GET 时重新生成，否则刷新旧标签页会导致 403。
     csrf_token = ""
 
     def _headers(self, code: int, content_type: str, length: int) -> None:
@@ -74,6 +79,8 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self) -> None:
         if self.path == "/api/health":
             self._send_text(200, "ok")
+        elif self.path == "/api/status":
+            self._send_json(200, status_api.get_status())
         elif self.path in ("/", "/index.html"):
             self._serve_index()
         else:
