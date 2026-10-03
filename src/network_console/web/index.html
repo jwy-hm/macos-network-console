@@ -4,7 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="csrf-token" content="__CSRF_TOKEN__">
-<title>网络控制台</title>
+<title>Network Console</title>
+<script>
+(function () {
+  var m = localStorage.getItem("mnc.theme") || "follow";
+  var e = m === "follow" ? (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light") : m;
+  document.documentElement.setAttribute("data-theme", e);
+})();
+</script>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -17,6 +24,7 @@
       <div class="nav-item" data-page="interface" data-i18n="nav.interfaces"></div>
       <div class="nav-item" data-page="connection" data-i18n="nav.connections"></div>
       <div class="nav-item" data-page="diagnostics" data-i18n="nav.diagnostics"></div>
+      <div class="nav-item" data-page="settings" data-i18n="nav.settings"></div>
     </nav>
   </aside>
 
@@ -24,7 +32,7 @@
     <header class="topbar">
       <span id="backend-status" class="status-dot"></span>
       <span id="backend-status-text" data-i18n="status.connected"></span>
-      <button id="lang-btn" class="btn-ghost">中</button>
+      <button id="lang-btn" class="btn-ghost">EN</button>
     </header>
 
     <section id="page-status" class="page">
@@ -64,6 +72,34 @@
         </div>
         <div id="diag-tools"></div>
         <div id="diag-results"></div>
+      </div>
+    </section>
+
+    <section id="page-settings" class="page" style="display:none">
+      <div class="card">
+        <div class="card-head"><h2 data-i18n="settings.title"></h2></div>
+        <div class="setting-row">
+          <div class="setting-label" data-i18n="settings.theme"></div>
+          <div class="setting-control theme-picker" id="theme-picker">
+            <label><input type="radio" name="theme" value="follow"> <span data-i18n="settings.theme.follow"></span></label>
+            <label><input type="radio" name="theme" value="light"> <span data-i18n="settings.theme.light"></span></label>
+            <label><input type="radio" name="theme" value="dark"> <span data-i18n="settings.theme.dark"></span></label>
+          </div>
+        </div>
+        <div class="setting-row">
+          <div class="setting-label">
+            <div data-i18n="settings.privacy"></div>
+            <div class="setting-sub muted" data-i18n="settings.privacy.desc"></div>
+          </div>
+          <div class="setting-control">
+            <label class="switch">
+              <input type="checkbox" id="privacy-toggle">
+              <span class="slider"></span>
+            </label>
+          </div>
+        </div>
+        <div class="setting-note muted" data-i18n="settings.privacy.tip"></div>
+        <div class="setting-saved muted" id="settings-saved" data-i18n="settings.saved" style="display:none"></div>
       </div>
     </section>
   </main>
