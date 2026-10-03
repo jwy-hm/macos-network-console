@@ -9,6 +9,8 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # 全历史，供 privacy-check --history 扫 commit message
 
       - uses: actions/setup-python@v5
         with:
@@ -25,8 +27,8 @@ jobs:
       - name: Test (pytest)
         run: pytest
 
-      - name: Privacy check
-        run: python scripts/privacy_check.py
+      - name: Privacy check (files + git history)
+        run: python scripts/privacy_check.py --history
 
       - name: i18n check
         run: python scripts/i18n_check.py

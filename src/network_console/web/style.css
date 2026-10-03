@@ -139,6 +139,7 @@ body {
 .conn-proto { color: var(--accent); font-size: 11px; font-weight: 650; }
 .conn-addr { color: var(--muted); font-family: monospace; font-size: 12px; }
 .conn-state { font-size: 11px; padding: 1px 6px; border-radius: 4px; background: var(--line); color: var(--muted); }
+.conn-count { font-size: 11px; color: var(--muted); font-weight: 650; }
 
 /* 诊断工具箱 */
 #diag-tools { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }

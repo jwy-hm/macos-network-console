@@ -2,7 +2,7 @@ PYTHON ?= python3
 VENV := .venv
 BIN := $(VENV)/bin
 
-.PHONY: run dev lint test smoke privacy-check i18n-check clean
+.PHONY: run dev lint test smoke privacy-check privacy-check-history i18n-check clean
 
 ## 启动（直接跑，无需 venv）
 run:
@@ -29,6 +29,10 @@ smoke:
 ## 隐私自查（私网IP/个人路径/本机用户名/邮箱，Python 实现）
 privacy-check:
 	$(PYTHON) scripts/privacy_check.py
+
+## 隐私自查 + git 历史 commit message（堵第三条泄漏通道）
+privacy-check-history:
+	$(PYTHON) scripts/privacy_check.py --history
 
 ## i18n 检查（除 i18n.js 外 web 前端无中文残留）
 i18n-check:

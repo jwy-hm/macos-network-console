@@ -1,39 +1,41 @@
+[**English**](CONTRIBUTING.md) | [简体中文](CONTRIBUTING.zh-CN.md)
+
 # Contributing
 
-感谢你的兴趣！欢迎提交 issue 和 PR。
+Thanks for your interest! Issues and PRs are welcome.
 
-## 开发环境
+## Development environment
 
 ```bash
-make dev      # 建 venv + 安装 ruff/pytest + 可编辑安装
-make lint     # 提交前跑代码规范检查
-make test     # 提交前跑单元测试
+make dev      # create venv + install ruff/pytest + editable install
+make lint     # lint before committing
+make test     # unit tests before committing
 ```
 
-## 代码风格
+## Code style
 
-- Python 遵循 PEP 8、PEP 484（全量类型标注），使用 `ruff` 检查。
-- 所有模块首行加 `from __future__ import annotations`。
-- 对外部命令的调用必须走 `network_console.core.shell`，禁止直接 `subprocess` + `shell=True`。
+- Python follows PEP 8 and PEP 484 (full type annotations), checked with `ruff`.
+- Every module starts with `from __future__ import annotations`.
+- External commands MUST go through `network_console.core.shell` — no direct `subprocess` + `shell=True`.
 
-## 提交规范
+## Commit conventions
 
-遵循 [Conventional Commits](https://www.conventionalcommits.org/)：
+Follow [Conventional Commits](https://www.conventionalcommits.org/):
 
-- `feat:` 新功能
-- `fix:` 修复
-- `docs:` 文档
-- `test:` 测试
-- `refactor:` 重构
-- `chore:` 杂项
+- `feat:` new feature
+- `fix:` bug fix
+- `docs:` documentation
+- `test:` tests
+- `refactor:` refactor
+- `chore:` miscellaneous
 
-## 隐私要求
+## Privacy requirements
 
-提交前请运行 `make privacy-check`，确保代码不含任何私人标识（私网 IP、个人目录路径、个人邮箱域名等）。
+Run `make privacy-check` before committing to ensure the code contains no personal identifiers (private IPs, personal directory paths, personal email domains, etc.).
 
-## PR 流程
+## PR flow
 
-1. 先开 issue 描述问题或想法
-2. fork + 开分支
-3. 提交时跑 `make lint && make test && make privacy-check`
-4. 发起 PR，附上变更说明
+1. Open an issue describing the problem or idea
+2. Fork + create a branch
+3. Run `make lint && make test && make privacy-check` before committing
+4. Open a PR with a description of the changes

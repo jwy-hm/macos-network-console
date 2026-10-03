@@ -63,3 +63,25 @@ def test_get_connections_truncates(monkeypatch):
     assert result["truncated"] is True
     assert len(result["connections"]) == 300
     assert result["scope"] == "own"
+
+
+def test_get_connections_aggregates_duplicates(monkeypatch):
+    from network_console.core.shell import Result
+
+    # 同一进程的多个 fd：相同四元组 (command, local, remote, state)，应聚合计数
+    text = (
+        "COMMAND PID USER FD TYPE DEVICE SIZE/OFF NODE NAME\n"
+        "rapportd 100 user 8u IPv4 0x0 0t0 TCP *:65349 (LISTEN)\n"
+        "rapportd 100 user 9u IPv4 0x0 0t0 TCP *:65349 (LISTEN)\n"
+        "rapportd 100 user 10u IPv4 0x0 0t0 TCP *:65349 (LISTEN)\n"
+        "mDNSResp 200 user 5u IPv4 0x0 0t0 UDP *:5353\n"
+    )
+    monkeypatch.setattr("network_console.api.connection.platform_macos.lsof_connections",
+                        lambda: Result(ok=True, value=text))
+    result = connection.get_connections()
+    # 原始 4 条，聚合后 2 条（rapportd ×3 + mDNSResp ×1）
+    assert result["total"] == 4
+    assert len(result["connections"]) == 2
+    conns = {c["command"]: c for c in result["connections"]}
+    assert conns["rapportd"]["count"] == 3
+    assert conns["mDNSResp"]["count"] == 1

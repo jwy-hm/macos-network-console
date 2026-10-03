@@ -1,27 +1,29 @@
-# 隐私说明
+[**English**](PRIVACY.md) | [简体中文](PRIVACY.zh-CN.md)
 
-本工具**纯本地运行**：只监听 `127.0.0.1`，不收集、不上传、不写日志（默认）、不包含任何遥测/统计/崩溃上报。
+# Privacy
 
-## 会主动发起的外部网络请求
+This tool is **purely local**: it listens on `127.0.0.1` only, and does not collect, upload, or write logs (by default). It contains no telemetry, statistics, or crash reporting.
 
-以下请求**仅在用户主动触发**时发生，且每一项都可关闭：
+## External network requests it may make
 
-| 功能 | 请求目标 | 触发方式 | 可否关闭 |
+The following requests happen **only on explicit user action**, and each can be disabled:
+
+| Feature | Target | Trigger | Can be disabled |
 |---|---|---|---|
-| 全球热门网站榜单 | `tranco-list.eu` | 点击「测全球 Top 100」 | 是（不点即不请求） |
-| 公网 IP 查询 | 公共 IP 查询 API | 点击「查询公网 IP」 | 是（默认关闭） |
-| 外网连通性检测 | 用户配置的目标（默认 google.com / cloudflare.com） | 体检或手动检测 | 是（目标可改） |
-| 网站测速 | 用户输入的任意域名 | 点击「测速」 | 是 |
+| Global top-sites list | `tranco-list.eu` | Clicking "test global Top 100" | Yes (no click = no request) |
+| Public IP lookup | public IP API | Clicking "query public IP" | Yes (off by default) |
+| External connectivity | user-configured target (default google.com / cloudflare.com) | health check or manual | Yes (target editable) |
+| Site speed test | any user-entered domain | Clicking "speed test" | Yes |
 
-## 不做什么
+## What it does NOT do
 
-- 不安装常驻服务、开机自启项
-- 不写日志到磁盘（默认；如开启，自动脱敏 MAC/IP/SSID）
-- 不收集或上传任何网络数据、系统信息、个人文件
-- 不包含遥测、统计、崩溃上报
+- Install persistent services or launch-at-login items
+- Write logs to disk (by default; if enabled, MAC/IP/SSID are auto-masked)
+- Collect or upload any network data, system info, or personal files
+- Contain telemetry, statistics, or crash reporting
 
-## 报告中的网络标识
+## Network identifiers in reports
 
-状态与诊断报告会展示本机真实的 DNS 服务器地址（如 `198.18.x.x`、运营商 DNS）与接口 / 内网 IP。这些内容仅在本地页面渲染，不上传、不落盘。
+Status and diagnostic reports show the machine's real DNS server addresses (e.g. `198.18.x.x`, carrier DNS) and interface / private IPs. These are rendered locally only — never uploaded, never written to disk.
 
-> 后续版本计划：报告导出 / 分享时默认脱敏，自动掩掉 DNS 服务器与私网 IP（`198.18.x.x`、`192.168.x.x`、`10.x.x.x` 等），避免把内部网络结构带入 issue 或截图。
+> Planned: report export / sharing will mask sensitive values by default (DNS servers and private IPs like `198.18.x.x`, `192.168.x.x`, `10.x.x.x`), so internal network structure never leaks into issues or screenshots.

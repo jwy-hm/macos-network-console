@@ -135,6 +135,27 @@ def test_get_wifi_disconnected(monkeypatch):
     assert "ssid" not in result
 
 
+def test_get_wifi_ssid_redacted(monkeypatch):
+    # 无定位权限时 system_profiler 返回 <redacted>，应标记而非直出占位串
+    _mock(monkeypatch, HARDWARE_WIFI, _load("macos13_no_location_permission.json"))
+    result = wifi.get_wifi()
+    assert result["connected"] is True
+    assert result["ssid_redacted"] is True
+    assert result["ssid"] == ""
+
+
+def test_is_redacted_matches_angle_bracket_placeholders():
+    # macOS 可能返回多种尖括号占位串，不只 <redacted>
+    assert wifi._is_redacted("<redacted>") is True
+    assert wifi._is_redacted("<Not Available>") is True
+    assert wifi._is_redacted("<unknown>") is True
+    assert wifi._is_redacted("  <redacted>  ") is True
+    # 真实 SSID 不应误判
+    assert wifi._is_redacted("TestNetwork") is False
+    assert wifi._is_redacted("") is False
+    assert wifi._is_redacted("<partially> open") is False
+
+
 def test_get_wifi_no_device(monkeypatch):
     _mock(monkeypatch, _load("no_wifi_device.txt"), "{}")
     result = wifi.get_wifi()
