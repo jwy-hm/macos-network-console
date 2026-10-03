@@ -13,6 +13,14 @@ def test_running_clients_no_match():
     assert status._running_clients("just a normal process list") == []
 
 
+def test_running_clients_filters_by_kind():
+    ps = "shadowrocket macpackettunnel tailscale atrust running"
+    # 只取 proxy 类：应只有 Shadowrocket，不含 Tailscale/aTrust
+    assert status._running_clients(ps, kinds=["proxy"]) == ["Shadowrocket"]
+    # 取 mesh/vpn/zero-trust 类：应含 Tailscale 与 aTrust
+    assert set(status._running_clients(ps, kinds=["mesh", "vpn", "zero-trust"])) == {"Tailscale", "Sangfor aTrust"}
+
+
 def test_check_proxy_ok_via_client():
     data = {
         "ps": Result(ok=True, value="shadowrocket macpackettunnel running"),

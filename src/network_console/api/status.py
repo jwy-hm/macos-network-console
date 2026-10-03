@@ -9,14 +9,11 @@ from __future__ import annotations
 
 import datetime
 from concurrent.futures import ThreadPoolExecutor
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from network_console import config
 from network_console.core import platform_macos
 from network_console.core.shell import Result
-
-# 内网互联工具关键词（Tailscale / ZeroTier / WireGuard）
-MESH_KEYWORDS = ["tailscale", "tailscaled", "zerotier", "wireguard"]
 
 
 def _check(check_id: str, label: str, ok: bool, value: str, hint: str = "") -> Dict:
@@ -51,10 +48,16 @@ def _collect() -> Dict[str, Result]:
 
 # ---------- 纯解析函数（可单测） ----------
 
-def _running_clients(ps_text: str) -> List[str]:
+def _running_clients(ps_text: str, kinds: Optional[List[str]] = None) -> List[str]:
+    """从进程表匹配运行中的客户端；kinds 为 None 表示不限类型。"""
     ps_lower = ps_text.lower()
-    return [str(c["name"]) for c in config.PROXY_CLIENTS
-            if any(kw in ps_lower for kw in c["keywords"])]
+    names: List[str] = []
+    for client in config.PROXY_CLIENTS:
+        if kinds is not None and client["kind"] not in kinds:
+            continue
+        if any(kw in ps_lower for kw in client["keywords"]):
+            names.append(str(client["name"]))
+    return names
 
 
 def _listening_ports(lsof_text: str) -> set:
@@ -108,7 +111,7 @@ def _parse_default_route(route_text: str) -> tuple:
 # ---------- 8 项检查 ----------
 
 def check_proxy(data: Dict[str, Result]) -> Dict:
-    names = _running_clients(data.get("ps", Result(ok=False)).value)
+    names = _running_clients(data.get("ps", Result(ok=False)).value, kinds=["proxy"])
     if names:
         return _check("proxy", "代理客户端", True, "运行中：" + "、".join(names))
     ports = _listening_ports(data.get("lsof", Result(ok=False)).value)
@@ -121,10 +124,9 @@ def check_proxy(data: Dict[str, Result]) -> Dict:
 
 
 def check_mesh(data: Dict[str, Result]) -> Dict:
-    ps_lower = data.get("ps", Result(ok=False)).value.lower()
-    hit = [kw for kw in MESH_KEYWORDS if kw in ps_lower]
-    if hit:
-        return _check("mesh", "内网互联", True, "运行中")
+    names = _running_clients(data.get("ps", Result(ok=False)).value, kinds=["mesh", "vpn", "zero-trust"])
+    if names:
+        return _check("mesh", "内网互联", True, "运行中：" + "、".join(names))
     return _check("mesh", "内网互联", False, "未运行", "使用内网互联（Tailscale/ZeroTier/WireGuard）时才需要")
 
 
