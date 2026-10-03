@@ -15,6 +15,8 @@
     <nav>
       <div class="nav-item active" data-page="status" data-i18n="nav.overview"></div>
       <div class="nav-item" data-page="interface" data-i18n="nav.interfaces"></div>
+      <div class="nav-item" data-page="connection" data-i18n="nav.connections"></div>
+      <div class="nav-item" data-page="diagnostics" data-i18n="nav.diagnostics"></div>
     </nav>
   </aside>
 
@@ -39,6 +41,29 @@
       <div class="card">
         <div class="card-head"><h2 data-i18n="interface.title"></h2></div>
         <div id="interface-list"></div>
+      </div>
+    </section>
+
+    <section id="page-connection" class="page" style="display:none">
+      <div class="card">
+        <div class="card-head"><h2 data-i18n="conn.title"></h2></div>
+        <div class="conn-toolbar">
+          <input id="conn-filter-proc" class="input" data-i18n-ph="conn.filterProc" autocomplete="off">
+          <input id="conn-filter-port" class="input" data-i18n-ph="conn.filterPort" autocomplete="off">
+        </div>
+        <div id="conn-meta" class="muted"></div>
+        <div id="conn-list"></div>
+      </div>
+    </section>
+
+    <section id="page-diagnostics" class="page" style="display:none">
+      <div class="card">
+        <div class="card-head">
+          <h2 data-i18n="diag.title"></h2>
+          <button id="diag-clear" class="btn-ghost" data-i18n="diag.clear"></button>
+        </div>
+        <div id="diag-tools"></div>
+        <div id="diag-results"></div>
       </div>
     </section>
   </main>

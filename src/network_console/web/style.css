@@ -103,3 +103,50 @@ body {
   .sidebar { width: 100%; border-right: none; border-bottom: 1px solid var(--line); }
   .sidebar nav { display: flex; gap: 4px; }
 }
+
+/* 输入框 */
+.input {
+  border: 1px solid var(--line); background: var(--bg); color: var(--ink);
+  border-radius: 8px; padding: 6px 10px; font-size: 13px; font-family: inherit; min-width: 0;
+}
+.input:focus { outline: none; border-color: var(--accent); }
+
+/* 连接监控 */
+.conn-toolbar { display: flex; gap: 8px; margin-bottom: 10px; }
+.conn-toolbar .input { flex: 1; }
+#conn-meta { font-size: 12px; margin-bottom: 10px; }
+.conn {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; margin-bottom: 6px;
+  font-size: 13px; font-variant-numeric: tabular-nums;
+}
+.conn.listen { border-left: 3px solid var(--ok); }
+.conn-proc { font-weight: 600; }
+.conn-pid { color: var(--muted); font-family: monospace; }
+.conn-proto { color: var(--accent); font-size: 11px; font-weight: 650; }
+.conn-addr { color: var(--muted); font-family: monospace; font-size: 12px; }
+.conn-state { font-size: 11px; padding: 1px 6px; border-radius: 4px; background: var(--line); color: var(--muted); }
+
+/* 诊断工具箱 */
+#diag-tools { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+@media (max-width: 640px) { #diag-tools { grid-template-columns: 1fr; } }
+.diag-tool { border: 1px solid var(--line); border-radius: 8px; padding: 12px 13px; }
+.diag-head { display: flex; align-items: center; gap: 8px; }
+.diag-name { font-weight: 650; font-size: 14px; }
+.diag-unavail { font-size: 11px; color: var(--warn); }
+.diag-desc { font-size: 12px; color: var(--muted); margin: 3px 0 8px; }
+.diag-row { display: flex; gap: 8px; }
+.diag-row .input { flex: 1; }
+.diag-status { font-size: 12px; color: var(--accent); min-height: 18px; margin-top: 6px; }
+.diag-results-title { font-size: 13px; font-weight: 650; margin: 18px 0 8px; }
+.diag-result { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; margin-bottom: 8px; }
+.diag-result.ok { border-left: 3px solid var(--ok); }
+.diag-result.bad { border-left: 3px solid var(--bad); }
+.diag-result-head { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+.diag-result-tool { font-weight: 650; font-size: 13px; text-transform: uppercase; color: var(--accent); }
+.diag-result-target { font-family: monospace; font-size: 12px; color: var(--muted); }
+.diag-result-summary { font-size: 13px; font-weight: 600; }
+.diag-result-detail { font-size: 12px; color: var(--muted); margin-top: 4px; font-variant-numeric: tabular-nums; }
+.diag-raw { margin-top: 6px; }
+.diag-raw summary { font-size: 12px; color: var(--muted); cursor: pointer; }
+.diag-raw pre { font-size: 12px; font-family: monospace; white-space: pre-wrap; word-break: break-all; margin: 6px 0 0; padding: 8px; background: var(--bg); border-radius: 6px; }

@@ -16,6 +16,9 @@ function applyI18n() {
   document.querySelectorAll("[data-i18n]").forEach((el) => {
     el.textContent = I18N.t(el.getAttribute("data-i18n"));
   });
+  document.querySelectorAll("[data-i18n-ph]").forEach((el) => {
+    el.placeholder = I18N.t(el.getAttribute("data-i18n-ph"));
+  });
   document.title = I18N.t("app.title");
   const btn = document.getElementById("lang-btn");
   if (btn) btn.textContent = I18N.lang === "zh" ? "EN" : "中";
@@ -146,10 +149,210 @@ async function renderInterfaces() {
   ifs.forEach((i) => list.appendChild(interfaceCard(i, maxBytes)));
 }
 
+// ---- 连接监控 ----
+
+let connData = null;
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
+function connFilter() {
+  if (!connData) return [];
+  const proc = (document.getElementById("conn-filter-proc").value || "").toLowerCase();
+  const port = (document.getElementById("conn-filter-port").value || "").trim();
+  return connData.connections.filter((c) => {
+    const okProc = !proc || (c.command || "").toLowerCase().indexOf(proc) >= 0;
+    const okPort =
+      !port ||
+      (c.local && c.local.indexOf(":" + port) >= 0) ||
+      (c.remote && c.remote.indexOf(":" + port) >= 0);
+    return okProc && okPort;
+  });
+}
+
+function connCard(c) {
+  const div = document.createElement("div");
+  div.className = "conn" + (c.state === "LISTEN" ? " listen" : "");
+  const remote = c.remote ? " → " + c.remote : "";
+  const state = c.state ? '<span class="conn-state">' + escapeHtml(c.state) + "</span>" : "";
+  div.innerHTML =
+    '<span class="conn-proc">' + escapeHtml(c.command) + "</span>" +
+    '<span class="conn-pid">' + escapeHtml(c.pid) + "</span>" +
+    '<span class="conn-proto">' + escapeHtml(c.proto) + "</span>" +
+    '<span class="conn-addr">' + escapeHtml(c.local) + escapeHtml(remote) + "</span>" +
+    state;
+  return div;
+}
+
+function renderConnList() {
+  const list = document.getElementById("conn-list");
+  const meta = document.getElementById("conn-meta");
+  if (!connData) return;
+  const conns = connFilter();
+  const shown = conns.length;
+  const total = connData.total;
+  meta.textContent =
+    I18N.t("conn.scope") +
+    " · " +
+    (connData.truncated
+      ? I18N.t("conn.truncated").replace("{shown}", shown).replace("{total}", total)
+      : I18N.t("conn.count").replace("{shown}", shown).replace("{total}", total));
+  list.innerHTML = "";
+  if (!conns.length) {
+    list.innerHTML = '<div class="muted">' + I18N.t("conn.empty") + "</div>";
+    return;
+  }
+  conns.forEach((c) => list.appendChild(connCard(c)));
+}
+
+async function renderConnections() {
+  const list = document.getElementById("conn-list");
+  if (!connData) {
+    list.innerHTML = '<div class="muted">' + I18N.t("status.detecting") + "</div>";
+    try {
+      connData = await (await fetch("/api/connection")).json();
+    } catch (e) {
+      connData = null;
+      list.innerHTML = '<div class="muted">加载失败</div>';
+      return;
+    }
+  }
+  renderConnList();
+}
+
+// ---- 诊断工具箱 ----
+
+const DIAG_TOOLS = [
+  { id: "ping", target: "8.8.8.8", cap: "ping" },
+  { id: "traceroute", target: "8.8.8.8", cap: "traceroute" },
+  { id: "http", target: "https://example.com", cap: "curl" },
+  { id: "dns", target: "example.com", cap: "dig" },
+];
+
+let diagTools = null;
+let diagHistory = [];
+
+function toolAvailable(tool) {
+  if (!diagTools) return false;
+  if (tool.id === "dns") return !!(diagTools.dig || diagTools.nslookup);
+  return !!diagTools[tool.cap];
+}
+
+function renderDiagToolCards() {
+  const wrap = document.getElementById("diag-tools");
+  wrap.innerHTML = "";
+  DIAG_TOOLS.forEach((tool) => {
+    const avail = toolAvailable(tool);
+    const card = document.createElement("div");
+    card.className = "diag-tool";
+    card.innerHTML =
+      '<div class="diag-head"><span class="diag-name">' +
+      I18N.t("diag." + tool.id + ".name") +
+      "</span>" +
+      (avail ? "" : '<span class="diag-unavail">' + I18N.t("diag.unavailable") + "</span>") +
+      "</div>" +
+      '<div class="diag-desc">' +
+      I18N.t("diag." + tool.id + ".desc") +
+      "</div>" +
+      '<div class="diag-row">' +
+      '<input id="diag-target-' + tool.id + '" class="input" value="' + escapeHtml(tool.target) + '" autocomplete="off">' +
+      '<button id="diag-run-' + tool.id + '" class="btn-ghost"' + (avail ? "" : " disabled") + ">" +
+      I18N.t("diag.run") +
+      "</button>" +
+      "</div>" +
+      '<div id="diag-status-' + tool.id + '" class="diag-status"></div>';
+    wrap.appendChild(card);
+    if (avail) {
+      document.getElementById("diag-run-" + tool.id).addEventListener("click", () => runDiag(tool.id));
+    }
+  });
+}
+
+function diagResultCard(r) {
+  const div = document.createElement("div");
+  div.className = "diag-result " + (r.ok ? "ok" : "bad");
+  let detail = "";
+  if (r.tool === "ping" && r.detail) {
+    detail =
+      "transmitted=" + r.detail.transmitted +
+      " received=" + r.detail.received +
+      " loss=" + r.detail.loss + "%";
+    if (r.detail.rtt && r.detail.rtt.avg != null) detail += " avg=" + r.detail.rtt.avg + "ms";
+  } else if (r.tool === "http" && r.detail && r.detail.timing) {
+    const t = r.detail.timing;
+    detail =
+      "DNS " + (t.namelookup || "-") + "s · 连接 " + (t.connect || "-") +
+      "s · TLS " + (t.appconnect || "-") + "s · 首字节 " + (t.starttransfer || "-") + "s";
+  }
+  div.innerHTML =
+    '<div class="diag-result-head">' +
+    '<span class="diag-result-tool">' + escapeHtml(r.tool) + "</span>" +
+    '<span class="diag-result-target">' + escapeHtml(r.target) + "</span>" +
+    '<span class="diag-result-summary">' + escapeHtml(r.summary) + "</span>" +
+    "</div>" +
+    (detail ? '<div class="diag-result-detail">' + escapeHtml(detail) + "</div>" : "") +
+    (r.raw ? '<details class="diag-raw"><summary>' + I18N.t("diag.raw") + "</summary><pre>" + escapeHtml(r.raw) + "</pre></details>" : "");
+  return div;
+}
+
+function renderDiagResults() {
+  const wrap = document.getElementById("diag-results");
+  wrap.innerHTML = "";
+  if (!diagHistory.length) return;
+  const title = document.createElement("div");
+  title.className = "diag-results-title";
+  title.textContent = I18N.t("diag.results");
+  wrap.appendChild(title);
+  diagHistory.forEach((r) => wrap.appendChild(diagResultCard(r)));
+}
+
+async function renderDiagnostics() {
+  if (!diagTools) {
+    try {
+      const resp = await (await fetch("/api/diagnostics/tools")).json();
+      diagTools = resp.tools || {};
+    } catch (e) {
+      diagTools = {};
+    }
+  }
+  renderDiagToolCards();
+  renderDiagResults();
+}
+
+async function runDiag(toolId) {
+  const input = document.getElementById("diag-target-" + toolId);
+  const target = input.value.trim();
+  if (!target) return;
+  const statusEl = document.getElementById("diag-status-" + toolId);
+  statusEl.textContent = I18N.t("diag.running");
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 15000);
+  let result;
+  try {
+    const resp = await fetch("/api/diagnostics/run", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-CSRF-Token": CSRF_TOKEN },
+      body: JSON.stringify({ tool: toolId, target: target }),
+      signal: controller.signal,
+    });
+    result = await resp.json();
+  } catch (e) {
+    result = { ok: false, tool: toolId, target: target, summary: I18N.t("diag.timeout"), detail: {}, raw: "" };
+  } finally {
+    clearTimeout(timer);
+    statusEl.textContent = "";
+  }
+  diagHistory.push(result);
+  renderDiagResults();
+}
+
 // ---- 页面切换 ----
 
 function renderPage(page) {
   if (page === "interface") renderInterfaces();
+  else if (page === "connection") renderConnections();
+  else if (page === "diagnostics") renderDiagnostics();
   else renderStatus();
 }
 
@@ -157,8 +360,9 @@ function showPage(page) {
   document.querySelectorAll(".nav-item").forEach((n) => {
     n.classList.toggle("active", n.dataset.page === page);
   });
-  document.getElementById("page-status").style.display = page === "status" ? "" : "none";
-  document.getElementById("page-interface").style.display = page === "interface" ? "" : "none";
+  ["status", "interface", "connection", "diagnostics"].forEach((p) => {
+    document.getElementById("page-" + p).style.display = p === page ? "" : "none";
+  });
   renderPage(page);
 }
 
@@ -171,6 +375,13 @@ document.getElementById("lang-btn").addEventListener("click", () => {
 });
 
 document.getElementById("btn-check").addEventListener("click", () => renderStatus());
+
+document.getElementById("conn-filter-proc").addEventListener("input", renderConnList);
+document.getElementById("conn-filter-port").addEventListener("input", renderConnList);
+document.getElementById("diag-clear").addEventListener("click", () => {
+  diagHistory = [];
+  renderDiagResults();
+});
 
 applyI18n();
 checkHealth();
