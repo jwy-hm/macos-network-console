@@ -27,3 +27,6 @@ jobs:
 
       - name: Privacy check
         run: bash scripts/privacy_check.sh
+
+      - name: i18n check
+        run: python scripts/i18n_check.py

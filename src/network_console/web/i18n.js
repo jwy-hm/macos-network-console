@@ -67,7 +67,7 @@ const I18N = {
       "settings.theme.dark": "深色",
       "settings.privacy": "隐私模式",
       "settings.privacy.desc": "开启后在页面上隐藏敏感信息",
-      "settings.privacy.tip": "隐私模式会隐藏：MAC 地址、公网 IP、代理 fake-ip（198.18/15）。不隐藏：内网网段（192.168.x 等）、DNS 服务器 IP（否则无法排查）。此设置只保存在本机浏览器 localStorage，不上传。",
+      "settings.privacy.tip": "隐私模式会隐藏：MAC 地址、公网 IP、代理 fake-ip（198.18/15）。不隐藏：内网网段（192.168.x 等）、DNS 服务器 IP（否则无法排查）。复制 / 导出的内容同样走掩码，原文仅存在于内存。此设置只保存在本机浏览器 localStorage，不上传。",
       "settings.saved": "设置已自动保存到本机浏览器",
     },
     en: {
@@ -131,7 +131,7 @@ const I18N = {
       "settings.theme.dark": "Dark",
       "settings.privacy": "Privacy mode",
       "settings.privacy.desc": "Mask sensitive info on the page",
-      "settings.privacy.tip": "Privacy mode masks: MAC addresses, public IPs, proxy fake-ips (198.18/15). It does NOT mask: private ranges (192.168.x etc.), DNS server IPs (needed for troubleshooting). Stored only in this browser's localStorage.",
+      "settings.privacy.tip": "Privacy mode masks: MAC addresses, public IPs, proxy fake-ips (198.18/15). It does NOT mask: private ranges (192.168.x etc.), DNS server IPs (needed for troubleshooting). Copy/export also routes through the same mask; raw values stay in memory only. Stored only in this browser's localStorage.",
       "settings.saved": "Settings auto-saved to this browser",
     },
   },

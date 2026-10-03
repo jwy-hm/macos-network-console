@@ -46,6 +46,11 @@ function initTheme() {
 }
 
 // ---- privacy mode ----
+//
+// Masking contract (Option A): every sensitive value funnels through maskMac /
+// maskFakeIp below. Any future copy / export feature MUST route values through
+// these same helpers, so masked display is never bypassed — raw values live in
+// memory only and must not be written to clipboard or exported files verbatim.
 
 function privacyOn() {
   return localStorage.getItem(PRIVACY_KEY) === "1";

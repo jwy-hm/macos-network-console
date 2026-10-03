@@ -2,7 +2,7 @@ PYTHON ?= python3
 VENV := .venv
 BIN := $(VENV)/bin
 
-.PHONY: run dev lint test privacy-check clean
+.PHONY: run dev lint test privacy-check i18n-check clean
 
 ## 启动（直接跑，无需 venv）
 run:
@@ -25,6 +25,10 @@ test:
 ## 隐私自查（中性正则，检查源码是否残留私网IP/个人路径）
 privacy-check:
 	bash scripts/privacy_check.sh
+
+## i18n 检查（除 i18n.js 外 web 前端无中文残留）
+i18n-check:
+	$(PYTHON) scripts/i18n_check.py
 
 clean:
 	rm -rf build dist *.egg-info .pytest_cache .ruff_cache
