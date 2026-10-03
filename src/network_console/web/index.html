@@ -13,9 +13,8 @@
     <div class="brand" data-i18n="app.title"></div>
     <div class="brand-sub" data-i18n="app.subtitle"></div>
     <nav>
-      <div class="nav-item active" data-i18n="nav.overview"></div>
-      <div class="nav-item disabled" data-i18n="nav.interfaces"></div>
-      <div class="nav-item disabled" data-i18n="nav.diagnostics"></div>
+      <div class="nav-item active" data-page="status" data-i18n="nav.overview"></div>
+      <div class="nav-item" data-page="interface" data-i18n="nav.interfaces"></div>
     </nav>
   </aside>
 
@@ -26,9 +25,21 @@
       <button id="lang-btn" class="btn-ghost">中</button>
     </header>
 
-    <section class="card">
-      <h2 data-i18n="status.title"></h2>
-      <p class="muted" data-i18n="status.placeholder"></p>
+    <section id="page-status" class="page">
+      <div class="card">
+        <div class="card-head">
+          <h2 data-i18n="status.title"></h2>
+          <button id="btn-check" class="btn-ghost" data-i18n="common.refresh"></button>
+        </div>
+        <div id="status-grid" aria-live="polite"></div>
+      </div>
+    </section>
+
+    <section id="page-interface" class="page" style="display:none">
+      <div class="card">
+        <div class="card-head"><h2 data-i18n="interface.title"></h2></div>
+        <div id="interface-list"></div>
+      </div>
     </section>
   </main>
 </div>

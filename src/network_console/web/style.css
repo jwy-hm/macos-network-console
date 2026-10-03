@@ -37,62 +37,69 @@ body {
 }
 
 .app { display: flex; min-height: 100vh; }
-
 .sidebar {
-  width: 220px;
-  flex-shrink: 0;
-  background: var(--card);
-  border-right: 1px solid var(--line);
-  padding: 20px 14px;
+  width: 220px; flex-shrink: 0; background: var(--card);
+  border-right: 1px solid var(--line); padding: 20px 14px;
 }
 .brand { font-size: 16px; font-weight: 700; }
 .brand-sub { font-size: 12px; color: var(--muted); margin-top: 2px; margin-bottom: 20px; }
 .nav-item {
-  padding: 9px 12px;
-  border-radius: 8px;
-  font-size: 14px;
-  cursor: pointer;
-  color: var(--ink);
-  margin-bottom: 2px;
+  padding: 9px 12px; border-radius: 8px; font-size: 14px; cursor: pointer;
+  color: var(--ink); margin-bottom: 2px;
 }
+.nav-item:hover { background: var(--line); }
 .nav-item.active { background: var(--accent); color: #fff; }
-.nav-item.disabled { color: var(--muted); cursor: default; }
 
 .content { flex: 1; padding: 24px 28px; }
-.topbar {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  justify-content: flex-end;
-  margin-bottom: 20px;
-}
+.topbar { display: flex; align-items: center; gap: 8px; justify-content: flex-end; margin-bottom: 20px; }
 .status-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
 .status-dot.ok { background: var(--ok); }
 .status-dot.bad { background: var(--bad); }
 #backend-status-text { font-size: 13px; color: var(--muted); margin-right: 12px; }
 
 .btn-ghost {
-  border: 1px solid var(--line);
-  background: transparent;
-  color: var(--ink);
-  border-radius: 8px;
-  padding: 6px 12px;
-  font-size: 13px;
-  cursor: pointer;
-  font-family: inherit;
+  border: 1px solid var(--line); background: transparent; color: var(--ink);
+  border-radius: 8px; padding: 6px 12px; font-size: 13px; cursor: pointer; font-family: inherit;
 }
 .btn-ghost:hover { background: var(--card); border-color: var(--accent); }
 
-.card {
-  background: var(--card);
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  padding: 20px;
-}
-.card h2 { margin: 0 0 10px; font-size: 15px; font-weight: 650; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 20px; }
+.card-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.card-head h2 { margin: 0; font-size: 15px; font-weight: 650; }
 .muted { color: var(--muted); }
+.page { max-width: 960px; }
+
+/* 状态卡 */
+#status-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+@media (max-width: 640px) { #status-grid { grid-template-columns: 1fr; } }
+.st { display: flex; gap: 10px; align-items: flex-start; padding: 12px 13px; border: 1px solid var(--line); border-radius: 8px; }
+.st .dot { width: 9px; height: 9px; border-radius: 50%; margin-top: 6px; flex-shrink: 0; background: #cbd5e1; }
+.st.ok .dot { background: var(--ok); }
+.st.bad .dot { background: var(--bad); }
+.st .txt { min-width: 0; }
+.st .lbl { font-size: 13px; color: var(--muted); }
+.st .val { font-size: 14px; font-weight: 600; margin-top: 1px; }
+.st.ok .val { color: var(--ok); }
+.st.bad .val { color: var(--bad); }
+.st .hint { font-size: 12px; color: var(--muted); margin-top: 3px; }
+
+/* 接口卡 */
+.gateway { font-size: 13px; margin-bottom: 12px; }
+.iface { border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; margin-bottom: 10px; }
+.iface .row1 { display: flex; align-items: center; gap: 8px; }
+.iface .dot { width: 9px; height: 9px; border-radius: 50%; background: #cbd5e1; }
+.iface.up .dot { background: var(--ok); }
+.iface.down .dot { background: var(--bad); }
+.iface .iname { font-weight: 650; font-size: 14px; }
+.iface .istate { font-size: 12px; color: var(--muted); }
+.iface .row2 { font-size: 13px; margin-top: 4px; display: flex; gap: 12px; flex-wrap: wrap; }
+.iface .imac { color: var(--muted); font-family: monospace; font-size: 12px; }
+.iface .imtu { color: var(--muted); font-size: 12px; }
+.iface .row3 { font-size: 12.5px; color: var(--muted); margin: 6px 0 4px; }
+.iface .traffic { font-variant-numeric: tabular-nums; }
 
 @media (max-width: 700px) {
   .app { flex-direction: column; }
   .sidebar { width: 100%; border-right: none; border-bottom: 1px solid var(--line); }
+  .sidebar nav { display: flex; gap: 4px; }
 }
