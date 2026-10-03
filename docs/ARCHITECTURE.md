@@ -1,3 +1,5 @@
+[**简体中文**](ARCHITECTURE.md) | [English](ARCHITECTURE.en.md)
+
 # 架构说明
 
 ## 总体结构
@@ -26,3 +28,22 @@ make lint && make test && make smoke && make privacy-check && make i18n-check
 ```
 
 五绿通过才算完成，才可开 PR。
+
+## Known Limitations
+
+以下为已知局限，属于有意为之或待后续版本处理，非 bug：
+
+- **`$USER` 裸词匹配的脆弱性**：`privacy_check.py` 的 `$USER` 动态黑名单用词边界匹配，
+  会把代码里同名的通用标识符（如 CI 上的 `runner`、变量名）误报。当前靠 `_SKIP_USERS`
+  跳过集缓解，但跳过集没有收敛终点（每遇一个新环境词就要加一条）。后续方向：改为
+  「只在明确上下文匹配用户名」（如 `/Users/<name>/`、`<name>@host`），而非全文裸词扫。
+- **TUN 代理下的诊断局限**：traceroute 全空跳、DNS 返回 fake-ip 是代理软件的正常行为，
+  详见 README「环境提示」。
+- **页面层渲染尚未接入自动化验证**：`make smoke` 只验证静态资源 200，不验证 JS 渲染
+  和交互。计划引入 playwright 做 `make ui-smoke`，彻底堵住「渲染没验证」的盲区。
+- **Wi-Fi 信道 / 速率字段未结构化**：`channel` 是拼好的显示串（`"36 (5GHz, 40MHz)"`），
+  未拆成 `channel`/`band`/`width_mhz` 三个字段；`rate_mbps` 是 Tx 速率，未标注方向。
+  留待 P2 做信道拥塞可视化时一并处理。
+- **MAC / fake-ip 遮罩仍是前端行为**：隐私模式下 MAC 与 fake-ip 由前端 mask 函数遮罩，
+  数据明文下发到浏览器。只有 preferred networks 做到了后端不返回。P2 做「报告脱敏」时
+  统一搬运到后端。

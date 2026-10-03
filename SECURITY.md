@@ -1,19 +1,21 @@
-# 安全政策
+[**English**](SECURITY.md) | [简体中文](SECURITY.zh-CN.md)
 
-## 报告漏洞
+# Security Policy
 
-如发现安全漏洞，请通过 **GitHub Security Advisory** 私密报告，**不要**开公开 issue。
+## Reporting a vulnerability
 
-- 提交入口：本仓库 `Security` 标签页 → `Report a vulnerability`
-- 我们会在 **48 小时内**回复
+If you find a security vulnerability, please report it privately via **GitHub Security Advisory** — do **not** open a public issue.
 
-## 安全设计
+- Submission: this repo's `Security` tab → `Report a vulnerability`
+- We respond within **48 hours**
 
-本工具纯本地运行，只监听 `127.0.0.1`，不接受来自本机以外的请求。核心安全基线：
+## Security design
 
-- CSRF token 校验（进程启动生成一次）
-- 命令白名单 + 黑名单（拒绝 `sudo` / `sh` / `python` 等万能命令）
-- 安全响应头（CSP / nosniff / no-referrer / X-Frame-Options）
-- 请求体大小上限
+This tool runs purely locally, listens on `127.0.0.1` only, and does not accept requests from outside the machine. Core security baseline:
 
-详见 [docs/PRIVACY.md](docs/PRIVACY.md) 与源码注释。
+- CSRF token validation (generated once at process start)
+- Command allowlist + blocklist (rejects `sudo` / `sh` / `python` and other arbitrary-code shells)
+- Security response headers (CSP / nosniff / no-referrer / X-Frame-Options)
+- Request body size limit
+
+See [docs/PRIVACY.md](docs/PRIVACY.md) and the source comments for details.
