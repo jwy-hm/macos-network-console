@@ -104,6 +104,10 @@ class Handler(BaseHTTPRequestHandler):
             self._send_json(413, {"ok": False, "error": "请求体过大"})
             return
         if self.path == "/api/diagnostics/run":
+            content_type = self.headers.get("Content-Type", "")
+            if "application/json" not in content_type:
+                self._send_json(400, {"ok": False, "error": "Content-Type 须为 application/json"})
+                return
             try:
                 body = json.loads(self.rfile.read(length).decode("utf-8") or "{}")
             except (ValueError, UnicodeDecodeError):
