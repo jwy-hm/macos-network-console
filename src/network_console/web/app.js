@@ -69,6 +69,16 @@ function maskFakeIp(text) {
   return out;
 }
 
+function maskSsid(ssid) {
+  if (!ssid) return ssid;
+  return ssid.replace(/./g, "\u2022");
+}
+
+function maskBssid(bssid) {
+  if (!bssid) return bssid;
+  return "\u2022\u2022:\u2022\u2022:\u2022\u2022:\u2022\u2022:\u2022\u2022:\u2022\u2022";
+}
+
 // ---- i18n ----
 
 let currentPage = "status";
@@ -421,6 +431,147 @@ async function runDiag(toolId) {
   renderDiagResults();
 }
 
+// ---- wifi ----
+
+let wifiData = null;
+let ssidRevealed = false;
+let preferredData = null;
+
+function signalBars(grade) {
+  const levels = { excellent: 4, good: 3, fair: 2, poor: 1, unknown: 0 };
+  const n = levels[grade] || 0;
+  let rects = "";
+  for (let i = 0; i < 4; i++) {
+    const on = i < n;
+    const h = (i + 1) * 3;
+    rects += '<rect x="' + (i * 7) + '" y="' + (12 - h) + '" width="5" height="' + h + '" rx="0.5" fill="' + (on ? "var(--accent)" : "var(--line)") + '"></rect>';
+  }
+  return '<svg class="wifi-bars" width="28" height="12" viewBox="0 0 28 12" role="img">' + rects + "</svg>";
+}
+
+function wifiSecurityLabel(key) {
+  if (!key) return "\u2014";
+  return I18N.t("wifi.security." + key) || key;
+}
+
+function wifiGradeLabel(grade) {
+  return I18N.t("wifi.grade." + grade) || grade;
+}
+
+function wifiField(labelKey, value) {
+  return '<div class="wifi-field"><span class="wifi-label">' + I18N.t(labelKey) +
+    '</span><span class="wifi-value">' + escapeHtml(String(value)) + "</span></div>";
+}
+
+function renderWifiContent() {
+  const content = document.getElementById("wifi-content");
+  if (!wifiData || !wifiData.connected) {
+    content.innerHTML = '<div class="muted">' + I18N.t("wifi.not_connected") +
+      (wifiData && wifiData.device ? " (" + escapeHtml(wifiData.device) + ")" : "") + "</div>";
+    return;
+  }
+  const d = wifiData;
+  const sig = d.signal || {};
+  const showSsid = ssidRevealed && !privacyOn();
+  const ssidText = showSsid ? d.ssid : maskSsid(d.ssid);
+  const bssid = d.bssid ? maskBssid(d.bssid) : I18N.t("wifi.bssid.unavailable");
+  const rate = d.rate_mbps != null ? d.rate_mbps + " Mbps" : "\u2014";
+  const eyeBtn = privacyOn()
+    ? ""
+    : '<button id="wifi-reveal" class="btn-ghost btn-mini" title="' + I18N.t("wifi.reveal") + '">\uD83D\uDC41</button>';
+  let note = "";
+  if (sig.note === "low_snr") {
+    note = '<div class="diag-warning">' + I18N.t("wifi.note.low_snr") + "</div>";
+  }
+  content.innerHTML =
+    '<div class="wifi-head">' +
+    '<span class="wifi-ssid" id="wifi-ssid-text">' + escapeHtml(ssidText) + "</span>" +
+    eyeBtn +
+    signalBars(sig.grade) +
+    '<span class="wifi-grade grade-' + escapeHtml(sig.grade) + '">' + wifiGradeLabel(sig.grade) + "</span>" +
+    "</div>" +
+    '<div class="wifi-grid">' +
+    wifiField("wifi.device", d.device) +
+    wifiField("wifi.security", wifiSecurityLabel(d.security)) +
+    wifiField("wifi.channel", d.channel || "\u2014") +
+    wifiField("wifi.phymode", d.phymode || "\u2014") +
+    wifiField("wifi.rate", rate) +
+    wifiField("wifi.bssid", bssid) +
+    wifiField("wifi.rssi", sig.rssi != null ? sig.rssi + " dBm" : "\u2014") +
+    wifiField("wifi.noise", sig.noise != null ? sig.noise + " dBm" : "\u2014") +
+    wifiField("wifi.snr", sig.snr != null ? sig.snr + " dB" : "\u2014") +
+    "</div>" +
+    note +
+    '<div id="wifi-preferred"></div>';
+  const revealBtn = document.getElementById("wifi-reveal");
+  if (revealBtn) {
+    revealBtn.addEventListener("click", () => {
+      ssidRevealed = !ssidRevealed;
+      document.getElementById("wifi-ssid-text").textContent =
+        (ssidRevealed && !privacyOn()) ? wifiData.ssid : maskSsid(wifiData.ssid);
+    });
+  }
+  renderPreferredSection();
+}
+
+function renderPreferredSection() {
+  const wrap = document.getElementById("wifi-preferred");
+  if (!wrap) return;
+  wrap.innerHTML = '<button id="wifi-preferred-btn" class="btn-ghost">' + I18N.t("wifi.preferred.show") + "</button>";
+  document.getElementById("wifi-preferred-btn").addEventListener("click", () => loadPreferred());
+}
+
+async function loadPreferred() {
+  const wrap = document.getElementById("wifi-preferred");
+  if (preferredData) {
+    renderPreferredList(wrap);
+    return;
+  }
+  const privacy = privacyOn() ? "1" : "0";
+  try {
+    preferredData = await (await fetch("/api/wifi/preferred?privacy=" + privacy)).json();
+  } catch (e) {
+    preferredData = null;
+  }
+  renderPreferredList(wrap);
+}
+
+function renderPreferredList(wrap) {
+  if (!preferredData) {
+    wrap.innerHTML = '<div class="muted">' + I18N.t("common.loadFailed") + "</div>";
+    return;
+  }
+  if (preferredData.masked) {
+    wrap.innerHTML = '<div class="muted">' + I18N.t("wifi.preferred.masked") + "</div>";
+    return;
+  }
+  const nets = preferredData.networks || [];
+  let html = '<div class="wifi-preferred-title">' + I18N.t("wifi.preferred.title") + " (" + nets.length + ")</div>";
+  if (!nets.length) {
+    html += '<div class="muted">' + I18N.t("wifi.preferred.empty") + "</div>";
+  } else {
+    html += '<div class="wifi-preferred-list">';
+    nets.forEach((n) => { html += '<span class="wifi-chip">' + escapeHtml(n) + "</span>"; });
+    html += "</div>";
+  }
+  wrap.innerHTML = html;
+}
+
+async function renderWifi() {
+  const content = document.getElementById("wifi-content");
+  if (!wifiData) {
+    content.innerHTML = '<div class="muted">' + I18N.t("status.detecting") + "</div>";
+    try {
+      wifiData = await (await fetch("/api/wifi")).json();
+    } catch (e) {
+      wifiData = null;
+      content.innerHTML = '<div class="muted">' + I18N.t("common.loadFailed") + "</div>";
+      return;
+    }
+  }
+  renderWifiContent();
+}
+
 // ---- settings ----
 
 function showSaved() {
@@ -442,6 +593,7 @@ function renderSettings() {
 
 function renderPage(page) {
   if (page === "interface") renderInterfaces();
+  else if (page === "wifi") renderWifi();
   else if (page === "connection") renderConnections();
   else if (page === "diagnostics") renderDiagnostics();
   else if (page === "settings") renderSettings();
@@ -453,7 +605,7 @@ function showPage(page) {
   document.querySelectorAll(".nav-item").forEach((n) => {
     n.classList.toggle("active", n.dataset.page === page);
   });
-  ["status", "interface", "connection", "diagnostics", "settings"].forEach((p) => {
+  ["status", "interface", "wifi", "connection", "diagnostics", "settings"].forEach((p) => {
     document.getElementById("page-" + p).style.display = p === page ? "" : "none";
   });
   renderPage(page);
