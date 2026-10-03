@@ -16,6 +16,8 @@ def main() -> None:
     parser.add_argument("--no-browser", action="store_true", help="不自动打开浏览器")
     args = parser.parse_args()
 
+    # CSRF token 生命周期：进程启动生成一次、全局唯一、多标签页共享。
+    # 勿在每次请求时重新生成，否则刷新旧标签页会 403。
     server.Handler.csrf_token = secrets.token_urlsafe(32)
 
     try:

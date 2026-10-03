@@ -27,6 +27,15 @@ if [ -n "$hits" ]; then
   fail=1
 fi
 
+# 3. git 作者身份（供人工确认是否愿意随 commit 历史公开，仅展示、不判定）
+echo "-- git 作者邮箱检查（人工确认）--"
+if command -v git >/dev/null 2>&1 && git rev-parse --git-dir >/dev/null 2>&1; then
+  git log --all --format='%an <%ae>' 2>/dev/null | sort -u
+  echo "（以上作者身份会随 commit 历史公开，请确认是否愿意公开）"
+else
+  echo "（非 git 仓库，跳过）"
+fi
+
 if [ "$fail" -eq 0 ]; then
   echo "通过：未发现私网 IP / 个人目录路径。"
 else
