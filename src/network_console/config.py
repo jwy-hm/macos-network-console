@@ -114,3 +114,14 @@ TRACEROUTE_TIMEOUT = float(os.environ.get("NETWORK_CONSOLE_TRACEROUTE_TIMEOUT", 
 # 每工具超时（秒）：前端 AbortController 与后端 shell.run 共用此表，避免两处漂移。
 # 键名与诊断工具 id 一致（ping/traceroute/http/dns）。
 TOOL_TIMEOUTS = {"ping": 15, "traceroute": 45, "http": 15, "dns": 10}
+
+# Wi-Fi 详情（system_profiler 是慢命令，单独超时，不进状态主环）
+WIFI_TIMEOUT = float(os.environ.get("NETWORK_CONSOLE_WIFI_TIMEOUT", "20"))
+
+# Wi-Fi 信号质量分级阈值（RSSI dBm，从优到差）。
+# 元素为 (阈值, 等级key)：第一个满足 rssi >= 阈值的即命中。
+# -70 是 802.11 丢包临界点，作为「差」档起点。
+WIFI_SIGNAL_THRESHOLDS = [(-50, "excellent"), (-60, "good"), (-70, "fair"), (-999, "poor")]
+
+# 信噪比低于该值（dB）时，额外标注「信号强但信道拥挤」
+WIFI_SNR_WARN = 20

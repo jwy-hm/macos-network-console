@@ -15,7 +15,6 @@ const STATUS_CHECKS = [
 // ---- theme (follow / light / dark) ----
 
 const THEME_KEY = "mnc.theme";
-const PRIVACY_KEY = "mnc.privacy";
 
 function getTheme() {
   const t = localStorage.getItem(THEME_KEY);
@@ -47,13 +46,30 @@ function initTheme() {
 
 // ---- privacy mode ----
 //
+// Privacy mode is a backend-driven, app-level state — not localStorage and not
+// a per-endpoint switch. Loaded from GET /api/settings/privacy at startup,
+// POSTed back on toggle. Sensitive endpoints (e.g. /api/wifi/preferred) read
+// this state unconditionally server-side, so client params cannot bypass it.
+//
 // Masking contract (Option A): every sensitive value funnels through maskMac /
-// maskFakeIp below. Any future copy / export feature MUST route values through
-// these same helpers, so masked display is never bypassed — raw values live in
-// memory only and must not be written to clipboard or exported files verbatim.
+// maskFakeIp / maskSsid / maskBssid below. Any future copy / export feature
+// MUST route through these same helpers — never concatenate raw values. Raw
+// values live in memory only and must not be written to clipboard or files.
+
+// backend privacy-state cache (loaded at startup)
+let privacyEnabled = false;
 
 function privacyOn() {
-  return localStorage.getItem(PRIVACY_KEY) === "1";
+  return privacyEnabled;
+}
+
+async function loadPrivacy() {
+  try {
+    const r = await (await fetch("/api/settings/privacy")).json();
+    privacyEnabled = !!r.enabled;
+  } catch (e) {
+    privacyEnabled = false;
+  }
 }
 
 function maskMac(mac) {
@@ -67,6 +83,16 @@ function maskFakeIp(text) {
   out = out.replace(/\b198\.18\.\d{1,3}\.\d{1,3}\b/g, "\u2022\u2022\u2022");
   out = out.replace(/\b240\.\d{1,3}\.\d{1,3}\.\d{1,3}\b/g, "\u2022\u2022\u2022");
   return out;
+}
+
+function maskSsid(ssid) {
+  if (!ssid) return ssid;
+  return ssid.replace(/./g, "\u2022");
+}
+
+function maskBssid(bssid) {
+  if (!bssid) return bssid;
+  return "\u2022\u2022:\u2022\u2022:\u2022\u2022:\u2022\u2022:\u2022\u2022:\u2022\u2022";
 }
 
 // ---- i18n ----
@@ -421,6 +447,157 @@ async function runDiag(toolId) {
   renderDiagResults();
 }
 
+// ---- wifi ----
+
+let wifiData = null;
+let ssidRevealed = false;
+let preferredData = null;
+
+function signalBars(grade) {
+  const levels = { excellent: 4, good: 3, fair: 2, poor: 1, unknown: 0 };
+  const n = levels[grade] || 0;
+  let rects = "";
+  for (let i = 0; i < 4; i++) {
+    const on = i < n;
+    const h = (i + 1) * 3;
+    rects += '<rect x="' + (i * 7) + '" y="' + (12 - h) + '" width="5" height="' + h + '" rx="0.5" fill="' + (on ? "var(--accent)" : "var(--line)") + '"></rect>';
+  }
+  return '<svg class="wifi-bars" width="28" height="12" viewBox="0 0 28 12" role="img">' + rects + "</svg>";
+}
+
+function wifiSecurityLabel(key) {
+  if (!key) return "\u2014";
+  return I18N.t("wifi.security." + key) || key;
+}
+
+function wifiGradeLabel(grade) {
+  return I18N.t("wifi.grade." + grade) || grade;
+}
+
+function wifiField(labelKey, value) {
+  return '<div class="wifi-field"><span class="wifi-label">' + I18N.t(labelKey) +
+    '</span><span class="wifi-value">' + escapeHtml(String(value)) + "</span></div>";
+}
+
+function renderWifiContent() {
+  const content = document.getElementById("wifi-content");
+  if (!wifiData || !wifiData.connected) {
+    content.innerHTML = '<div class="muted">' + I18N.t("wifi.not_connected") +
+      (wifiData && wifiData.device ? " (" + escapeHtml(wifiData.device) + ")" : "") + "</div>";
+    return;
+  }
+  const d = wifiData;
+  const sig = d.signal || {};
+  const showSsid = ssidRevealed;
+  const ssidText = showSsid ? d.ssid : maskSsid(d.ssid);
+  const rate = d.rate_mbps != null ? d.rate_mbps + " Mbps" : "\u2014";
+  // eye button always present, independent of privacy mode; icon = current state
+  const eyeIcon = showSsid ? "\uD83D\uDC41" : "\uD83D\uDE48";
+  const eyeBtn = '<button id="wifi-reveal" class="btn-ghost btn-mini" title="' +
+    I18N.t("wifi.reveal") + '">' + eyeIcon + "</button>";
+  let note = "";
+  if (sig.note === "low_snr") {
+    note = '<div class="diag-warning">' + I18N.t("wifi.note.low_snr") + "</div>";
+  }
+  // field rows: skip BSSID entirely when null/empty (no empty line)
+  let fields =
+    wifiField("wifi.device", d.device) +
+    wifiField("wifi.security", wifiSecurityLabel(d.security)) +
+    wifiField("wifi.channel", d.channel || "\u2014") +
+    wifiField("wifi.phymode", d.phymode || "\u2014") +
+    wifiField("wifi.rate", rate);
+  if (d.bssid) {
+    fields += wifiField("wifi.bssid", maskBssid(d.bssid));
+  }
+  fields +=
+    wifiField("wifi.rssi", sig.rssi != null ? sig.rssi + " dBm" : "\u2014") +
+    wifiField("wifi.noise", sig.noise != null ? sig.noise + " dBm" : "\u2014") +
+    wifiField("wifi.snr", sig.snr != null ? sig.snr + " dB" : "\u2014");
+  content.innerHTML =
+    '<div class="wifi-head">' +
+    '<span class="wifi-ssid" id="wifi-ssid-text">' + escapeHtml(ssidText) + "</span>" +
+    eyeBtn +
+    signalBars(sig.grade) +
+    '<span class="wifi-grade grade-' + escapeHtml(sig.grade) + '">' + wifiGradeLabel(sig.grade) + "</span>" +
+    "</div>" +
+    '<div class="wifi-grid">' + fields + "</div>" +
+    note +
+    '<div id="wifi-preferred"></div>';
+  const revealBtn = document.getElementById("wifi-reveal");
+  if (revealBtn) {
+    revealBtn.addEventListener("click", () => {
+      ssidRevealed = !ssidRevealed;
+      document.getElementById("wifi-ssid-text").textContent =
+        ssidRevealed ? wifiData.ssid : maskSsid(wifiData.ssid);
+      revealBtn.textContent = ssidRevealed ? "\uD83D\uDC41" : "\uD83D\uDE48";
+      if (ssidRevealed) {
+        showToast(I18N.t("wifi.reveal.toast"));
+      }
+    });
+  }
+  renderPreferredSection();
+}
+
+function renderPreferredSection() {
+  const wrap = document.getElementById("wifi-preferred");
+  if (!wrap) return;
+  wrap.innerHTML = '<button id="wifi-preferred-btn" class="btn-ghost">' + I18N.t("wifi.preferred.show") + "</button>";
+  document.getElementById("wifi-preferred-btn").addEventListener("click", () => loadPreferred());
+}
+
+async function loadPreferred() {
+  const wrap = document.getElementById("wifi-preferred");
+  if (preferredData) {
+    renderPreferredList(wrap);
+    return;
+  }
+  try {
+    preferredData = await (await fetch("/api/wifi/preferred")).json();
+  } catch (e) {
+    preferredData = null;
+  }
+  renderPreferredList(wrap);
+}
+
+function renderPreferredList(wrap) {
+  if (!preferredData) {
+    wrap.innerHTML = '<div class="muted">' + I18N.t("common.loadFailed") + "</div>";
+    return;
+  }
+  if (preferredData.masked) {
+    wrap.innerHTML = '<div class="muted">' + I18N.t("wifi.preferred.masked") + "</div>";
+    return;
+  }
+  const nets = preferredData.networks || [];
+  let html = '<div class="wifi-preferred-title">' + I18N.t("wifi.preferred.title") + " (" + nets.length + ")</div>";
+  if (!nets.length) {
+    html += '<div class="muted">' + I18N.t("wifi.preferred.empty") + "</div>";
+  } else {
+    html += '<div class="wifi-preferred-list">';
+    nets.forEach((n) => { html += '<span class="wifi-chip">' + escapeHtml(n) + "</span>"; });
+    html += "</div>";
+  }
+  wrap.innerHTML = html;
+}
+
+async function renderWifi() {
+  const content = document.getElementById("wifi-content");
+  // reset eye state on page entry to follow privacy-mode default:
+  // privacy off -> plaintext, privacy on -> masked
+  ssidRevealed = !privacyOn();
+  if (!wifiData) {
+    content.innerHTML = '<div class="muted">' + I18N.t("status.detecting") + "</div>";
+    try {
+      wifiData = await (await fetch("/api/wifi")).json();
+    } catch (e) {
+      wifiData = null;
+      content.innerHTML = '<div class="muted">' + I18N.t("common.loadFailed") + "</div>";
+      return;
+    }
+  }
+  renderWifiContent();
+}
+
 // ---- settings ----
 
 function showSaved() {
@@ -429,6 +606,19 @@ function showSaved() {
   el.style.display = "";
   clearTimeout(showSaved._t);
   showSaved._t = setTimeout(() => { el.style.display = "none"; }, 1500);
+}
+
+function showToast(msg) {
+  let el = document.getElementById("toast");
+  if (!el) {
+    el = document.createElement("div");
+    el.id = "toast";
+    document.body.appendChild(el);
+  }
+  el.textContent = msg;
+  el.style.display = "";
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(() => { el.style.display = "none"; }, 3000);
 }
 
 function renderSettings() {
@@ -442,6 +632,7 @@ function renderSettings() {
 
 function renderPage(page) {
   if (page === "interface") renderInterfaces();
+  else if (page === "wifi") renderWifi();
   else if (page === "connection") renderConnections();
   else if (page === "diagnostics") renderDiagnostics();
   else if (page === "settings") renderSettings();
@@ -453,7 +644,7 @@ function showPage(page) {
   document.querySelectorAll(".nav-item").forEach((n) => {
     n.classList.toggle("active", n.dataset.page === page);
   });
-  ["status", "interface", "connection", "diagnostics", "settings"].forEach((p) => {
+  ["status", "interface", "wifi", "connection", "diagnostics", "settings"].forEach((p) => {
     document.getElementById("page-" + p).style.display = p === page ? "" : "none";
   });
   renderPage(page);
@@ -483,8 +674,17 @@ document.querySelectorAll('input[name="theme"]').forEach((r) => {
   r.addEventListener("change", () => { if (r.checked) setTheme(r.value); });
 });
 
-document.getElementById("privacy-toggle").addEventListener("change", (e) => {
-  localStorage.setItem(PRIVACY_KEY, e.target.checked ? "1" : "0");
+document.getElementById("privacy-toggle").addEventListener("change", async (e) => {
+  privacyEnabled = e.target.checked;
+  try {
+    await fetch("/api/settings/privacy", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-CSRF-Token": CSRF_TOKEN },
+      body: JSON.stringify({ enabled: privacyEnabled }),
+    });
+  } catch (err) {
+    // keep local state if backend is down; re-fetched on next startup
+  }
   showSaved();
   renderPage(currentPage);
 });
@@ -494,4 +694,4 @@ document.getElementById("privacy-toggle").addEventListener("change", (e) => {
 initTheme();
 applyI18n();
 checkHealth();
-renderStatus();
+loadPrivacy().then(() => renderStatus());

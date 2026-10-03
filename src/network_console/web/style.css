@@ -183,3 +183,31 @@ body {
 .slider::before { content: ""; position: absolute; height: 18px; width: 18px; left: 3px; top: 3px; background: #fff; border-radius: 50%; transition: 0.2s; }
 .switch input:checked + .slider { background: var(--accent); }
 .switch input:checked + .slider::before { transform: translateX(20px); }
+
+/* Wi-Fi */
+.wifi-head { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+.wifi-ssid { font-size: 18px; font-weight: 650; letter-spacing: 0.5px; }
+.btn-mini { padding: 2px 8px; font-size: 13px; line-height: 1.4; }
+.wifi-bars { vertical-align: middle; }
+.wifi-grade { font-size: 13px; font-weight: 650; padding: 2px 8px; border-radius: 6px; }
+.wifi-grade.grade-excellent { color: #059669; background: rgba(5,150,105,0.12); }
+.wifi-grade.grade-good { color: #10b981; background: rgba(16,185,129,0.12); }
+.wifi-grade.grade-fair { color: #d97706; background: rgba(217,119,6,0.12); }
+.wifi-grade.grade-poor { color: #dc2626; background: rgba(220,38,38,0.12); }
+.wifi-grade.grade-unknown { color: var(--muted); background: var(--line); }
+.wifi-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 16px; margin-bottom: 12px; }
+@media (max-width: 640px) { .wifi-grid { grid-template-columns: 1fr; } }
+.wifi-field { display: flex; justify-content: space-between; gap: 10px; padding: 6px 0; border-bottom: 1px solid var(--line); font-size: 13px; }
+.wifi-label { color: var(--muted); }
+.wifi-value { font-weight: 600; font-variant-numeric: tabular-nums; }
+.wifi-preferred-title { font-size: 13px; font-weight: 650; margin: 10px 0 6px; }
+.wifi-preferred-list { display: flex; flex-wrap: wrap; gap: 6px; }
+.wifi-chip { font-size: 12px; padding: 3px 8px; border-radius: 12px; background: var(--line); color: var(--ink); }
+
+/* 提示气泡（toast） */
+#toast {
+  position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+  background: var(--ink); color: var(--bg); padding: 8px 16px; border-radius: 8px;
+  font-size: 13px; box-shadow: 0 4px 16px rgba(0,0,0,0.18); z-index: 100;
+  display: none; max-width: 80vw;
+}

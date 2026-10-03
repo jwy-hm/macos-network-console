@@ -1,0 +1,4 @@
+Preferred networks on en0:
+	TestNetwork
+	OfficeNetwork
+	Home-5G
