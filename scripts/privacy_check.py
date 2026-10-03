@@ -147,7 +147,35 @@ def _check_git_emails() -> None:
             _PROBLEMS.append(f"git 作者邮箱非 noreply: {e}")
 
 
+def _check_history(user: str) -> None:
+    """扫 git 全历史 commit message（subject + body）。
+
+    commit message 是第三条泄漏通道——2026-10-04 就曾把真实私网 IP 写进
+    commit body，文件扫描抓不到。这里用同一套检测规则扫 message 文本。
+    """
+    try:
+        out = subprocess.run(
+            ["git", "log", "--all", "--format=%H%n%s%n%b"],
+            capture_output=True, text=True, cwd=str(REPO),
+        ).stdout
+    except (OSError, subprocess.SubprocessError):
+        return
+    for line in out.splitlines():
+        if _IGNORE_MARK in line:
+            continue
+        _check_ips(line, "git-history", 0)
+        _check_paths(line, "git-history", 0)
+        _check_username(line, "git-history", 0, user)
+
+
 def main() -> int:
+    import argparse
+
+    parser = argparse.ArgumentParser(description="隐私自查")
+    parser.add_argument("--history", action="store_true",
+                        help="额外扫描 git 全历史 commit message")
+    args = parser.parse_args()
+
     user = os.environ.get("USER", "")
     for path in _iter_files():
         rel = str(path.relative_to(REPO))
@@ -162,9 +190,12 @@ def main() -> int:
             _check_paths(line, rel, lineno)
             _check_username(line, rel, lineno, user)
     _check_git_emails()
+    if args.history:
+        _check_history(user)
 
+    scope = f"{' '.join(SCAN_DIRS)} {' '.join(SCAN_ROOT_MD)}" + (" + git 历史" if args.history else "")
     print("== privacy-check ==")
-    print(f"扫描：{' '.join(SCAN_DIRS)} {' '.join(SCAN_ROOT_MD)}")
+    print(f"扫描：{scope}")
     if _PROBLEMS:
         print(f"❌ 发现 {len(_PROBLEMS)} 个问题：")
         for p in _PROBLEMS:
