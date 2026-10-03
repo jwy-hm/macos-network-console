@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import json
 import os
-from http.server import BaseHTTPRequestHandler, HTTPServer
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Optional
 
 from network_console import config
@@ -167,18 +167,22 @@ class Handler(BaseHTTPRequestHandler):
         pass  # 默认不打日志到磁盘
 
 
-def create_server(port: Optional[int]) -> HTTPServer:
+def create_server(port: Optional[int]) -> ThreadingHTTPServer:
     """绑定端口。
 
     :param port: 显式端口，占用时抛 OSError；None 时从 config.PORT 起自动 +1。
+
+    用 ThreadingHTTPServer（而非单线程 HTTPServer）：Safari 等浏览器会用
+    keep-alive 长连接并发请求，单线程服务会被卡在读 socket 上，导致后续
+    请求（含新连接）全部超时。每连接一线程可避免此阻塞。
     """
     if port is not None:
-        return HTTPServer(("127.0.0.1", port), Handler)
+        return ThreadingHTTPServer(("127.0.0.1", port), Handler)
 
     candidate = config.PORT
     for _ in range(100):
         try:
-            return HTTPServer(("127.0.0.1", candidate), Handler)
+            return ThreadingHTTPServer(("127.0.0.1", candidate), Handler)
         except OSError:
             candidate += 1
     raise OSError("找不到可用端口")
