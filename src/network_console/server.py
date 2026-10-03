@@ -16,6 +16,7 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 from typing import Optional
 
 from network_console import config
+from network_console.api import interface as interface_api
 from network_console.api import status as status_api
 
 WEB_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "web")
@@ -81,6 +82,8 @@ class Handler(BaseHTTPRequestHandler):
             self._send_text(200, "ok")
         elif self.path == "/api/status":
             self._send_json(200, status_api.get_status())
+        elif self.path == "/api/interface":
+            self._send_json(200, interface_api.get_interfaces())
         elif self.path in ("/", "/index.html"):
             self._serve_index()
         else:
