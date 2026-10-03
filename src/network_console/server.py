@@ -33,6 +33,14 @@ SECURITY_HEADERS = {
     "X-Frame-Options": "DENY",
 }
 
+# 静态资源白名单：URL 路径 -> (文件名, Content-Type)。
+# 只映射已知文件、绝不拿 self.path 拼路径，避免路径穿越。
+STATIC_FILES = {
+    "/app.js": ("app.js", "application/javascript; charset=utf-8"),
+    "/i18n.js": ("i18n.js", "application/javascript; charset=utf-8"),
+    "/style.css": ("style.css", "text/css; charset=utf-8"),
+}
+
 
 class Handler(BaseHTTPRequestHandler):
     protocol_version = "HTTP/1.1"
@@ -73,6 +81,17 @@ class Handler(BaseHTTPRequestHandler):
         self._headers(200, "text/html; charset=utf-8", len(body))
         self.wfile.write(body)
 
+    def _serve_static(self, filename: str, content_type: str) -> None:
+        path = os.path.join(WEB_DIR, filename)
+        try:
+            with open(path, "rb") as fh:
+                body = fh.read()
+        except OSError:
+            self._send_json(404, {"ok": False, "error": "not found"})
+            return
+        self._headers(200, content_type, len(body))
+        self.wfile.write(body)
+
     def do_HEAD(self) -> None:
         if self.path == "/api/health":
             self._headers(200, "text/plain; charset=utf-8", 2)
@@ -92,6 +111,9 @@ class Handler(BaseHTTPRequestHandler):
             self._send_json(200, diagnostics_api.get_tools())
         elif self.path in ("/", "/index.html"):
             self._serve_index()
+        elif self.path in STATIC_FILES:
+            filename, content_type = STATIC_FILES[self.path]
+            self._serve_static(filename, content_type)
         else:
             self._send_json(404, {"ok": False, "error": "not found"})
 

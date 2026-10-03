@@ -118,3 +118,12 @@ def test_api_dotdot_returns_404(running_server):
     )
     assert _status(resp) == 404
     assert b"class Handler" not in resp  # 不得返回 server.py 源码
+
+
+def test_static_files_served(running_server):
+    for path in ("/app.js", "/style.css", "/i18n.js"):
+        resp = _send_raw(
+            running_server,
+            ("GET " + path + " HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r\n").encode(),
+        )
+        assert _status(resp) == 200, path
