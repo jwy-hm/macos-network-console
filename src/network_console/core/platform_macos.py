@@ -80,9 +80,26 @@ def lsof_listen() -> Result:
     return shell.run(["lsof", "-iTCP", "-sTCP:LISTEN", "-n", "-P"])
 
 
+def lsof_connections() -> Result:
+    """当前所有网络连接（含非监听）。-i=网络文件 -n=不解析主机名 -P=不解析端口名，省 3-5 秒解析。"""
+    return shell.run(["lsof", "-i", "-n", "-P"])
+
+
 def ping(host: str, count: int = 1, timeout_ms: int = 3000) -> Result:
     """BSD ping：-c 次数，-W 单包超时毫秒。"""
     return shell.run(["ping", "-c", str(count), "-W", str(timeout_ms), host])
+
+
+def ping_diag(host: str, count: int = 5, interval: float = 0.2, timeout_ms: int = 3000) -> Result:
+    """诊断用 ping：-c 次数 -i 间隔秒 -W 单包超时毫秒。"""
+    return shell.run(
+        ["ping", "-c", str(count), "-i", str(interval), "-W", str(timeout_ms), host]
+    )
+
+
+def traceroute_diag(host: str, max_hops: int = 20) -> Result:
+    """诊断用 traceroute：-n 不反查 DNS、-w 每跳超时 2s、-q 每跳 1 次、-m 最大跳数。"""
+    return shell.run(["traceroute", "-n", "-w", "2", "-q", "1", "-m", str(max_hops), host])
 
 
 def curl_http(url: str) -> Result:
@@ -90,3 +107,32 @@ def curl_http(url: str) -> Result:
     return shell.run(
         ["curl", "-sS", "-o", "/dev/null", "-w", "%{http_code} %{time_total}", "--max-time", "8", url]
     )
+
+
+def curl_timing(url: str, max_time: int = 15) -> Result:
+    """HTTP 头 + 时间分解一次拿到：-D - 输出响应头，-w 输出各阶段耗时。"""
+    wfmt = (
+        "---TIMING---\\n"
+        "namelookup:%{time_namelookup}\\n"
+        "connect:%{time_connect}\\n"
+        "appconnect:%{time_appconnect}\\n"
+        "starttransfer:%{time_starttransfer}\\n"
+        "total:%{time_total}\\n"
+    )
+    return shell.run(
+        [
+            "curl", "-sS", "-L", "--max-redirs", "5",
+            "-o", "/dev/null", "-D", "-", "-w", wfmt,
+            "--max-time", str(max_time), url,
+        ]
+    )
+
+
+def dig_lookup(domain: str) -> Result:
+    """DNS 解析（A 记录等）。"""
+    return shell.run(["dig", "+short", domain])
+
+
+def nslookup_host(domain: str) -> Result:
+    """DNS 解析（dig 不可用时的回退）。"""
+    return shell.run(["nslookup", domain])

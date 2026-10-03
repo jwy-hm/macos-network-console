@@ -16,6 +16,8 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 from typing import Optional
 
 from network_console import config
+from network_console.api import connection as connection_api
+from network_console.api import diagnostics as diagnostics_api
 from network_console.api import interface as interface_api
 from network_console.api import status as status_api
 
@@ -84,6 +86,10 @@ class Handler(BaseHTTPRequestHandler):
             self._send_json(200, status_api.get_status())
         elif self.path == "/api/interface":
             self._send_json(200, interface_api.get_interfaces())
+        elif self.path == "/api/connection":
+            self._send_json(200, connection_api.get_connections())
+        elif self.path == "/api/diagnostics/tools":
+            self._send_json(200, diagnostics_api.get_tools())
         elif self.path in ("/", "/index.html"):
             self._serve_index()
         else:
@@ -97,8 +103,18 @@ class Handler(BaseHTTPRequestHandler):
         if length > config.MAX_BODY_BYTES:
             self._send_json(413, {"ok": False, "error": "请求体过大"})
             return
-        # P0：尚无具体 POST 动作端点，先返回占位。
-        self._send_json(200, {"ok": True, "value": "ok"})
+        if self.path == "/api/diagnostics/run":
+            try:
+                body = json.loads(self.rfile.read(length).decode("utf-8") or "{}")
+            except (ValueError, UnicodeDecodeError):
+                self._send_json(400, {"ok": False, "error": "请求体不是合法 JSON"})
+                return
+            result = diagnostics_api.run_tool(
+                str(body.get("tool", "")), str(body.get("target", ""))
+            )
+            self._send_json(200, result)
+            return
+        self._send_json(404, {"ok": False, "error": "not found"})
 
     def log_message(self, *args) -> None:  # noqa: D401
         pass  # 默认不打日志到磁盘

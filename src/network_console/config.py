@@ -93,3 +93,17 @@ LATENCY_SLOW_MS = 2000
 
 # HTTP 请求体上限（防超大 body 打爆本地服务）
 MAX_BODY_BYTES = 1024 * 1024
+
+# 连接监控：最多返回的连接条数（超出截断，前端据 truncated 提示）
+MAX_CONNECTIONS = int(os.environ.get("NETWORK_CONSOLE_MAX_CONNECTIONS", "300"))
+
+# 诊断工具统一超时（秒）：ping / traceroute / HTTP 都可能跑 10s+，前端 + 后端都压在这里
+DIAG_TIMEOUT = float(os.environ.get("NETWORK_CONSOLE_DIAG_TIMEOUT", "15"))
+
+# ping 诊断默认参数（BSD）
+PING_COUNT = 5
+PING_INTERVAL = 0.2
+PING_TIMEOUT_MS = 3000
+
+# traceroute 参数：-w 每跳超时秒 / -q 每跳探测数 / -m 最大跳数
+TRACEROUTE_MAX_HOPS = 20
