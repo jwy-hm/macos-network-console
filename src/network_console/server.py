@@ -20,6 +20,7 @@ from network_console.api import connection as connection_api
 from network_console.api import diagnostics as diagnostics_api
 from network_console.api import interface as interface_api
 from network_console.api import status as status_api
+from network_console.api import wifi as wifi_api
 
 WEB_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "web")
 
@@ -92,6 +93,16 @@ class Handler(BaseHTTPRequestHandler):
         self._headers(200, content_type, len(body))
         self.wfile.write(body)
 
+    def _query_param(self, name: str) -> str:
+        """取查询参数值（path 形如 /api/x?a=1&b=2），没有则返回空串。"""
+        if "?" not in self.path:
+            return ""
+        query = self.path.split("?", 1)[1]
+        for pair in query.split("&"):
+            if "=" in pair and pair.split("=", 1)[0] == name:
+                return pair.split("=", 1)[1]
+        return ""
+
     def do_HEAD(self) -> None:
         if self.path == "/api/health":
             self._headers(200, "text/plain; charset=utf-8", 2)
@@ -109,6 +120,11 @@ class Handler(BaseHTTPRequestHandler):
             self._send_json(200, connection_api.get_connections())
         elif self.path == "/api/diagnostics/tools":
             self._send_json(200, diagnostics_api.get_tools())
+        elif self.path == "/api/wifi":
+            self._send_json(200, wifi_api.get_wifi())
+        elif self.path.split("?", 1)[0] == "/api/wifi/preferred":
+            privacy = self._query_param("privacy") == "1"
+            self._send_json(200, wifi_api.get_preferred_networks(privacy))
         elif self.path in ("/", "/index.html"):
             self._serve_index()
         elif self.path in STATIC_FILES:

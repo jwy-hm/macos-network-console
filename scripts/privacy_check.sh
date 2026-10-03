@@ -12,9 +12,10 @@ echo "== 隐私自查（中性正则）=="
 
 # 1. 私网 IP（RFC1918 + 链路本地 + fake-ip 保留段 198.18/15），排除回环/广播/0.0.0.0
 # 末尾用 [^0-9./] 排除 CIDR 段表示（如 198.18.0.0/15 是检测逻辑里的常量，非个人标识）
+# 扫描范围含 tests/fixtures/：防止有人把真实网络数据抓进样本就 push 上去
 echo "-- 私网 IP / fake-ip 检查 --"
 hits=$("${GREP[@]}" -E '(^|[^0-9.])(10|172\.(1[6-9]|2[0-9]|3[01])|192\.168|198\.18)\.([0-9]{1,3}\.)[0-9]{1,3}([^0-9./]|$)' \
-  src/ scripts/ 2>/dev/null)
+  src/ scripts/ tests/fixtures/ 2>/dev/null)
 if [ -n "$hits" ]; then
   echo "$hits"
   fail=1
@@ -22,7 +23,7 @@ fi
 
 # 2. 个人目录绝对路径
 echo "-- 个人目录路径检查 --"
-hits=$("${GREP[@]}" -E '/Users/[A-Za-z0-9_.-]+|/home/[A-Za-z0-9_.-]+' src/ scripts/ 2>/dev/null)
+hits=$("${GREP[@]}" -E '/Users/[A-Za-z0-9_.-]+|/home/[A-Za-z0-9_.-]+' src/ scripts/ tests/fixtures/ 2>/dev/null)
 if [ -n "$hits" ]; then
   echo "$hits"
   fail=1

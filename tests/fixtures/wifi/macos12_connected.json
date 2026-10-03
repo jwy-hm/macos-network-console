@@ -1,0 +1,31 @@
+{
+  "SPAirPortDataType": [
+    {
+      "spairport_airport_interfaces": [
+        {
+          "_name": "en0",
+          "spairport_status_information": "spairport_status_connected",
+          "spairport_current_network_information": {
+            "_name": "TestNetwork",
+            "spairport_network_channel": "36 (5GHz, 40MHz)",
+            "spairport_network_country_code": "US",
+            "spairport_network_mcs": 6,
+            "spairport_network_phymode": "802.11ac",
+            "spairport_network_rate": 270,
+            "spairport_network_type": "spairport_network_type_station",
+            "spairport_security_mode": "spairport_security_mode_wpa2_personal",
+            "spairport_signal_noise": "-58 dBm / -97 dBm"
+          },
+          "spairport_wireless_mac_address": "aa:bb:cc:dd:ee:ff"
+        },
+        {
+          "_name": "awdl0",
+          "spairport_current_network_information": {
+            "spairport_network_type": "spairport_network_type_awdl"
+          },
+          "spairport_wireless_mac_address": "aa:bb:cc:dd:ee:00"
+        }
+      ]
+    }
+  ]
+}

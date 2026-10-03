@@ -149,3 +149,21 @@ def nslookup_host(domain: str, timeout: float | None = None) -> Result:
         ["nslookup", domain],
         timeout=timeout if timeout is not None else config.DIAG_TIMEOUT,
     )
+
+
+def hardware_ports() -> Result:
+    """硬件端口列表（networksetup，快命令），用于找 Wi-Fi 主接口 device。"""
+    return shell.run(["networksetup", "-listallhardwareports"])
+
+
+def wifi_info() -> Result:
+    """Wi-Fi 详情（system_profiler，慢命令 2-10s）。JSON 输出优先，独立接口。"""
+    return shell.run(
+        ["system_profiler", "-json", "SPAirPortDataType"],
+        timeout=config.WIFI_TIMEOUT,
+    )
+
+
+def preferred_wireless_networks(device: str) -> Result:
+    """已保存的 Wi-Fi 网络列表（networksetup，快命令）。"""
+    return shell.run(["networksetup", "-listpreferredwirelessnetworks", device])
