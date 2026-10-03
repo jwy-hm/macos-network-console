@@ -2,7 +2,7 @@ PYTHON ?= python3
 VENV := .venv
 BIN := $(VENV)/bin
 
-.PHONY: run dev lint test privacy-check i18n-check clean
+.PHONY: run dev lint test smoke privacy-check i18n-check clean
 
 ## 启动（直接跑，无需 venv）
 run:
@@ -21,6 +21,10 @@ lint:
 ## 单元测试
 test:
 	$(BIN)/python -m pytest
+
+## 冒烟测试（起服务检查首页 + 静态资源全 200）
+smoke:
+	bash scripts/smoke.sh
 
 ## 隐私自查（中性正则，检查源码是否残留私网IP/个人路径）
 privacy-check:
