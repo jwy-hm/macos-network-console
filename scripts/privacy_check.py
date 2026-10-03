@@ -75,8 +75,9 @@ _ALLOWED_NETS = [
 # 个人目录路径白名单
 _ALLOWED_USERS = {"user", "example"}
 
-# 用户名黑名单跳过集（太泛或太短，检测会误报）
-_SKIP_USERS = {"user", "root", "admin", "test"}
+# 用户名黑名单跳过集：通用英文词，会撞上代码里的标识符（如 runner 变量、test 函数），
+# 不能当个人标识来查。CI 的默认用户是 runner，本地是真实用户名，两者都要能正确工作。
+_SKIP_USERS = {"user", "root", "admin", "test", "runner"}
 
 _IGNORE_MARK = "privacy-check: ignore"
 
