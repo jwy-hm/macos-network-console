@@ -44,4 +44,10 @@ ARGS=()
 [ -n "${PORT:-}" ] && ARGS+=("--port" "$PORT")
 [ -n "${NO_BROWSER:-}" ] && ARGS+=("--no-browser")
 
-exec python3 -m network_console "${ARGS[@]}"
+# bash 3.2 在 set -u 下展开空数组 "${ARGS[@]}" 会报 unbound variable，
+# 必须先判空（bash 4.4+ 才修复了此行为）。
+if [ "${#ARGS[@]}" -eq 0 ]; then
+  exec python3 -m network_console
+else
+  exec python3 -m network_console "${ARGS[@]}"
+fi

@@ -127,3 +127,26 @@ def test_static_files_served(running_server):
             ("GET " + path + " HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r\n").encode(),
         )
         assert _status(resp) == 200, path
+
+
+def test_concurrent_requests_not_blocked(running_server):
+    """回归测试：服务必须是多线程的。
+
+    单线程 HTTPServer 会被 keep-alive 长连接（Safari 等浏览器）卡在读 socket 上，
+    导致后续新连接全部超时。用 4 个并发请求验证互不阻塞。
+    """
+    results = []
+
+    def fetch():
+        resp = _send_raw(
+            running_server,
+            b"GET /api/health HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r\n",
+        )
+        results.append(_status(resp))
+
+    threads = [threading.Thread(target=fetch) for _ in range(4)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join(timeout=10)
+    assert results == [200, 200, 200, 200]
