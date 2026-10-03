@@ -144,14 +144,16 @@ def test_get_wifi_no_device(monkeypatch):
 
 # ---------- get_preferred_networks ----------
 
-def test_get_preferred_networks_privacy_on():
-    result = wifi.get_preferred_networks(privacy=True)
+def test_get_preferred_networks_privacy_on(monkeypatch):
+    monkeypatch.setattr("network_console.api.wifi.settings._privacy_enabled", True)
+    result = wifi.get_preferred_networks()
     assert result["masked"] is True
     assert result["networks"] == []
     assert result["hint"] == "privacy"
 
 
 def test_get_preferred_networks_normal(monkeypatch):
+    monkeypatch.setattr("network_console.api.wifi.settings._privacy_enabled", False)
     monkeypatch.setattr(
         "network_console.api.wifi.platform_macos.hardware_ports",
         lambda: Result(ok=True, value=HARDWARE_WIFI),
@@ -160,6 +162,6 @@ def test_get_preferred_networks_normal(monkeypatch):
         "network_console.api.wifi.platform_macos.preferred_wireless_networks",
         lambda device: Result(ok=True, value=_load("preferred_networks.txt")),
     )
-    result = wifi.get_preferred_networks(privacy=False)
+    result = wifi.get_preferred_networks()
     assert result["masked"] is False
     assert result["networks"] == ["TestNetwork", "OfficeNetwork", "Home-5G"]

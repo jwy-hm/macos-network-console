@@ -203,3 +203,11 @@ body {
 .wifi-preferred-title { font-size: 13px; font-weight: 650; margin: 10px 0 6px; }
 .wifi-preferred-list { display: flex; flex-wrap: wrap; gap: 6px; }
 .wifi-chip { font-size: 12px; padding: 3px 8px; border-radius: 12px; background: var(--line); color: var(--ink); }
+
+/* 提示气泡（toast） */
+#toast {
+  position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+  background: var(--ink); color: var(--bg); padding: 8px 16px; border-radius: 8px;
+  font-size: 13px; box-shadow: 0 4px 16px rgba(0,0,0,0.18); z-index: 100;
+  display: none; max-width: 80vw;
+}

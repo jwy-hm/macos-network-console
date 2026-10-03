@@ -19,6 +19,7 @@ from network_console import config
 from network_console.api import connection as connection_api
 from network_console.api import diagnostics as diagnostics_api
 from network_console.api import interface as interface_api
+from network_console.api import settings as settings_api
 from network_console.api import status as status_api
 from network_console.api import wifi as wifi_api
 
@@ -93,15 +94,17 @@ class Handler(BaseHTTPRequestHandler):
         self._headers(200, content_type, len(body))
         self.wfile.write(body)
 
-    def _query_param(self, name: str) -> str:
-        """取查询参数值（path 形如 /api/x?a=1&b=2），没有则返回空串。"""
-        if "?" not in self.path:
-            return ""
-        query = self.path.split("?", 1)[1]
-        for pair in query.split("&"):
-            if "=" in pair and pair.split("=", 1)[0] == name:
-                return pair.split("=", 1)[1]
-        return ""
+    def _read_json_body(self, length: int) -> Optional[dict]:
+        """读取并解析 JSON 请求体。失败时已发送错误响应，返回 None。"""
+        content_type = self.headers.get("Content-Type", "")
+        if "application/json" not in content_type:
+            self._send_json(400, {"ok": False, "error": "Content-Type 须为 application/json"})
+            return None
+        try:
+            return json.loads(self.rfile.read(length).decode("utf-8") or "{}")
+        except (ValueError, UnicodeDecodeError):
+            self._send_json(400, {"ok": False, "error": "请求体不是合法 JSON"})
+            return None
 
     def do_HEAD(self) -> None:
         if self.path == "/api/health":
@@ -123,8 +126,9 @@ class Handler(BaseHTTPRequestHandler):
         elif self.path == "/api/wifi":
             self._send_json(200, wifi_api.get_wifi())
         elif self.path.split("?", 1)[0] == "/api/wifi/preferred":
-            privacy = self._query_param("privacy") == "1"
-            self._send_json(200, wifi_api.get_preferred_networks(privacy))
+            self._send_json(200, wifi_api.get_preferred_networks())
+        elif self.path == "/api/settings/privacy":
+            self._send_json(200, settings_api.get_privacy())
         elif self.path in ("/", "/index.html"):
             self._serve_index()
         elif self.path in STATIC_FILES:
@@ -142,18 +146,19 @@ class Handler(BaseHTTPRequestHandler):
             self._send_json(413, {"ok": False, "error": "请求体过大"})
             return
         if self.path == "/api/diagnostics/run":
-            content_type = self.headers.get("Content-Type", "")
-            if "application/json" not in content_type:
-                self._send_json(400, {"ok": False, "error": "Content-Type 须为 application/json"})
-                return
-            try:
-                body = json.loads(self.rfile.read(length).decode("utf-8") or "{}")
-            except (ValueError, UnicodeDecodeError):
-                self._send_json(400, {"ok": False, "error": "请求体不是合法 JSON"})
+            body = self._read_json_body(length)
+            if body is None:
                 return
             result = diagnostics_api.run_tool(
                 str(body.get("tool", "")), str(body.get("target", ""))
             )
+            self._send_json(200, result)
+            return
+        if self.path == "/api/settings/privacy":
+            body = self._read_json_body(length)
+            if body is None:
+                return
+            result = settings_api.set_privacy(bool(body.get("enabled", False)))
             self._send_json(200, result)
             return
         self._send_json(404, {"ok": False, "error": "not found"})

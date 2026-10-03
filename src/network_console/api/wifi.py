@@ -16,6 +16,7 @@ import re
 from typing import Dict, List, Optional, Tuple
 
 from network_console import config
+from network_console.api import settings
 from network_console.core import platform_macos
 
 # 信号噪声合并字段："-58 dBm / -97 dBm"
@@ -169,12 +170,13 @@ def get_wifi() -> Dict:
     return result
 
 
-def get_preferred_networks(privacy: bool) -> Dict:
+def get_preferred_networks() -> Dict:
     """GET /api/wifi/preferred：已保存网络列表。
 
+    隐私开关来自后端进程内状态（``api.settings``），不接受客户端参数——
     隐私模式下后端直接不返回网络名（连数据都不发，而非前端遮罩）。
     """
-    if privacy:
+    if settings.is_privacy_enabled():
         return {"ok": True, "masked": True, "networks": [], "hint": "privacy"}
 
     device = find_wifi_device()
