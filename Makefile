@@ -26,9 +26,9 @@ test:
 smoke:
 	bash scripts/smoke.sh
 
-## 隐私自查（中性正则，检查源码是否残留私网IP/个人路径）
+## 隐私自查（私网IP/个人路径/本机用户名/邮箱，Python 实现）
 privacy-check:
-	bash scripts/privacy_check.sh
+	$(PYTHON) scripts/privacy_check.py
 
 ## i18n 检查（除 i18n.js 外 web 前端无中文残留）
 i18n-check:
