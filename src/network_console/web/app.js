@@ -234,7 +234,40 @@ async function renderInterfaces() {
     g.textContent = I18N.t("interface.gateway") + ": " + (dr.interface || "-") + " / " + (dr.gateway || "-");
     list.appendChild(g);
   }
-  ifs.forEach((i) => list.appendChild(interfaceCard(i, maxBytes)));
+  // Show only interfaces with a real address (non-link-local IPv4 or non-::1
+  // IPv6) by default, and collapse the rest (system-internal / link-local-only
+  // interfaces like utun0..8 with only fe80::) behind a toggle, so traffic-less
+  // interfaces don't drown the few that matter.
+  const hasRealAddr = (i) => {
+    if (i.inet) return true;
+    if (i.inet6) {
+      const v6 = String(i.inet6).toLowerCase();
+      return v6 !== "::1" && !v6.startsWith("fe80:");
+    }
+    return false;
+  };
+  const primary = ifs.filter((i) => hasRealAddr(i) || i.name === "lo0");
+  const hidden = ifs.filter((i) => !(hasRealAddr(i) || i.name === "lo0"));
+  primary.forEach((i) => list.appendChild(interfaceCard(i, maxBytes)));
+  if (hidden.length) {
+    const toggle = document.createElement("button");
+    toggle.id = "iface-toggle";
+    toggle.className = "btn-ghost";
+    toggle.textContent = I18N.t("interface.showAll").replace("{n}", hidden.length);
+    list.appendChild(toggle);
+    const wrap = document.createElement("div");
+    wrap.id = "iface-hidden";
+    wrap.style.display = "none";
+    hidden.forEach((i) => wrap.appendChild(interfaceCard(i, maxBytes)));
+    list.appendChild(wrap);
+    toggle.addEventListener("click", () => {
+      const showing = wrap.style.display !== "none";
+      wrap.style.display = showing ? "none" : "";
+      toggle.textContent = showing
+        ? I18N.t("interface.showAll").replace("{n}", hidden.length)
+        : I18N.t("interface.collapse");
+    });
+  }
 }
 
 // ---- connections ----
@@ -264,12 +297,14 @@ function connCard(c) {
   div.className = "conn" + (c.state === "LISTEN" ? " listen" : "");
   const remote = c.remote ? " \u2192 " + c.remote : "";
   const state = c.state ? '<span class="conn-state">' + escapeHtml(c.state) + "</span>" : "";
+  const count = c.count > 1 ? '<span class="conn-count">\u00d7' + c.count + "</span>" : "";
   div.innerHTML =
     '<span class="conn-proc">' + escapeHtml(c.command) + "</span>" +
     '<span class="conn-pid">' + escapeHtml(c.pid) + "</span>" +
     '<span class="conn-proto">' + escapeHtml(c.proto) + "</span>" +
     '<span class="conn-addr">' + escapeHtml(c.local) + escapeHtml(remote) + "</span>" +
-    state;
+    state +
+    count;
   return div;
 }
 
@@ -488,16 +523,26 @@ function renderWifiContent() {
   }
   const d = wifiData;
   const sig = d.signal || {};
-  const showSsid = ssidRevealed;
-  const ssidText = showSsid ? d.ssid : maskSsid(d.ssid);
+  const redacted = !!d.ssid_redacted;
+  const showSsid = !redacted && ssidRevealed;
+  const ssidText = redacted ? "\u2014" : (showSsid ? d.ssid : maskSsid(d.ssid));
   const rate = d.rate_mbps != null ? d.rate_mbps + " Mbps" : "\u2014";
-  // eye button always present, independent of privacy mode; icon = current state
-  const eyeIcon = showSsid ? "\uD83D\uDC41" : "\uD83D\uDE48";
-  const eyeBtn = '<button id="wifi-reveal" class="btn-ghost btn-mini" title="' +
-    I18N.t("wifi.reveal") + '">' + eyeIcon + "</button>";
+  // SSID redacted by macOS when location permission is denied; eye is useless
+  const eyeBtn = redacted
+    ? ""
+    : '<button id="wifi-reveal" class="btn-ghost btn-mini" title="' +
+      I18N.t("wifi.reveal") + '">' + (showSsid ? "\uD83D\uDC41" : "\uD83D\uDE48") + "</button>";
   let note = "";
   if (sig.note === "low_snr") {
     note = '<div class="diag-warning">' + I18N.t("wifi.note.low_snr") + "</div>";
+  }
+  // degraded SSID + permission guidance when location permission is missing
+  let redactedNote = "";
+  if (redacted) {
+    redactedNote =
+      '<div class="diag-warning">' + I18N.t("wifi.ssid.redacted") +
+      ' <button id="wifi-perm-help" class="btn-ghost btn-mini">' +
+      I18N.t("wifi.ssid.perm_help") + "</button></div>";
   }
   // field rows: skip BSSID entirely when null/empty (no empty line)
   let fields =
@@ -520,6 +565,7 @@ function renderWifiContent() {
     signalBars(sig.grade) +
     '<span class="wifi-grade grade-' + escapeHtml(sig.grade) + '">' + wifiGradeLabel(sig.grade) + "</span>" +
     "</div>" +
+    redactedNote +
     '<div class="wifi-grid">' + fields + "</div>" +
     note +
     '<div id="wifi-preferred"></div>';
@@ -534,6 +580,10 @@ function renderWifiContent() {
         showToast(I18N.t("wifi.reveal.toast"));
       }
     });
+  }
+  const permBtn = document.getElementById("wifi-perm-help");
+  if (permBtn) {
+    permBtn.addEventListener("click", () => showToast(I18N.t("wifi.ssid.perm_path")));
   }
   renderPreferredSection();
 }

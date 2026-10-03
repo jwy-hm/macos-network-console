@@ -122,6 +122,16 @@ def _find_interface(data: Dict, device: str) -> Optional[Dict]:
     return interfaces[0] if interfaces else None
 
 
+# macOS 无定位权限时，system_profiler 对 SSID 返回尖括号占位串（如 <redacted>、
+# <Not Available>），而非真实名称。统一按「尖括号包裹的短字符串」判定，覆盖已知
+# 占位串与未来变体，避免只匹配单一字面量。
+_REDACTED_SSID_RE = re.compile(r"^<[^<>]{1,64}>$")
+
+
+def _is_redacted(value: str) -> bool:
+    return bool(value) and bool(_REDACTED_SSID_RE.match(value.strip()))
+
+
 def _parse_connected_network(iface: Dict) -> Dict:
     cinfo = iface.get("spairport_current_network_information") or {}
     rssi, noise = parse_signal_noise(cinfo.get("spairport_signal_noise", ""))
@@ -129,8 +139,12 @@ def _parse_connected_network(iface: Dict) -> Dict:
     grade = signal_grade(rssi)
     note = "low_snr" if (snr is not None and snr < config.WIFI_SNR_WARN) else ""
     rate = cinfo.get("spairport_network_rate")
+    raw_ssid = cinfo.get("_name", "")
+    # 无定位权限时 SSID 被系统 redact，标记出来让前端降级显示（不直出占位串）
+    ssid_redacted = _is_redacted(raw_ssid)
     return {
-        "ssid": cinfo.get("_name", ""),
+        "ssid": "" if ssid_redacted else raw_ssid,
+        "ssid_redacted": ssid_redacted,
         "bssid": None,  # 现代 macOS system_profiler 不提供 BSSID
         "security": security_key(cinfo.get("spairport_security_mode", "")),
         "channel": cinfo.get("spairport_network_channel", ""),

@@ -54,14 +54,30 @@ def parse_lsof(text: str) -> List[Dict]:
 
 
 def get_connections() -> Dict:
-    """返回连接列表（截断到 MAX_CONNECTIONS）+ 总数 + 权限范围。"""
+    """返回连接列表（截断到 MAX_CONNECTIONS）+ 总数 + 权限范围。
+
+    同一进程的多个 file descriptor 会被 lsof 逐行列出，从用户视角是重复行。
+    按 (command, local, remote, state) 四元组聚合，同 key 计数，前端显示 ×N。
+    """
     res = platform_macos.lsof_connections()
     all_conns = parse_lsof(res.value)
     total = len(all_conns)
+
+    # 四元组聚合：保序（首次出现的顺序）+ 计数
+    aggregated: Dict[tuple, Dict] = {}
+    for c in all_conns:
+        key = (c["command"], c["local"], c["remote"], c["state"])
+        if key in aggregated:
+            aggregated[key]["count"] += 1
+        else:
+            c["count"] = 1
+            aggregated[key] = c
+    conns = list(aggregated.values())
+
     truncated = total > config.MAX_CONNECTIONS
     return {
         "ok": True,
-        "connections": all_conns[: config.MAX_CONNECTIONS],
+        "connections": conns[: config.MAX_CONNECTIONS],
         "total": total,
         "truncated": truncated,
         # 普通用户 lsof 只能看到自身进程；系统级连接需 sudo（P0 未实现）
