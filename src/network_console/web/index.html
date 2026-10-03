@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="csrf-token" content="__CSRF_TOKEN__">
+<title>网络控制台</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand" data-i18n="app.title"></div>
+    <div class="brand-sub" data-i18n="app.subtitle"></div>
+    <nav>
+      <div class="nav-item active" data-i18n="nav.overview"></div>
+      <div class="nav-item disabled" data-i18n="nav.interfaces"></div>
+      <div class="nav-item disabled" data-i18n="nav.diagnostics"></div>
+    </nav>
+  </aside>
+
+  <main class="content">
+    <header class="topbar">
+      <span id="backend-status" class="status-dot"></span>
+      <span id="backend-status-text" data-i18n="status.connected"></span>
+      <button id="lang-btn" class="btn-ghost">中</button>
+    </header>
+
+    <section class="card">
+      <h2 data-i18n="status.title"></h2>
+      <p class="muted" data-i18n="status.placeholder"></p>
+    </section>
+  </main>
+</div>
+
+<script src="i18n.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
