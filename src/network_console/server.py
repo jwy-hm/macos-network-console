@@ -18,6 +18,7 @@ from typing import Optional
 from network_console import config
 from network_console.api import connection as connection_api
 from network_console.api import diagnostics as diagnostics_api
+from network_console.api import dns as dns_api
 from network_console.api import interface as interface_api
 from network_console.api import settings as settings_api
 from network_console.api import status as status_api
@@ -135,6 +136,8 @@ class Handler(BaseHTTPRequestHandler):
         elif self.path.split("?", 1)[0] == "/api/topsites":
             force = "refresh=1" in self.path
             self._send_json(200, topsites_api.get_topsites(100, force))
+        elif self.path == "/api/dns":
+            self._send_json(200, dns_api.get_dns_overview())
         elif self.path == "/api/settings/privacy":
             self._send_json(200, settings_api.get_privacy())
         elif self.path in ("/", "/index.html"):
@@ -178,6 +181,14 @@ class Handler(BaseHTTPRequestHandler):
                 self._send_json(400, {"ok": False, "error": "domains 须为数组"})
                 return
             self._send_json(200, topsites_api.run_ping([str(d) for d in domains]))
+            return
+        if self.path == "/api/dns/query":
+            body = self._read_json_body(length)
+            if body is None:
+                return
+            domain = str(body.get("domain", ""))
+            record_type = str(body.get("type", "A"))
+            self._send_json(200, dns_api.query_dns(domain, record_type))
             return
         self._send_json(404, {"ok": False, "error": "not found"})
 

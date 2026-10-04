@@ -66,6 +66,11 @@ def networksetup_get_proxy(service: str, kind: str) -> Result:
     return shell.run(["networksetup", flag, service])
 
 
+def networksetup_get_dns(service: str) -> Result:
+    """读取某个网络服务配置的 DNS 服务器（只读，无需 sudo）。"""
+    return shell.run(["networksetup", "-getdnsservers", service])
+
+
 def system_profiler_wifi() -> Result:
     """Wi-Fi 详情（较慢，建议异步加载）。"""
     return shell.run(["system_profiler", "SPAirPortDataType"])
@@ -148,6 +153,14 @@ def dig_lookup(domain: str, timeout: float | None = None) -> Result:
     """DNS 解析（A 记录等）。"""
     return shell.run(
         ["dig", "+short", domain],
+        timeout=timeout if timeout is not None else config.DIAG_TIMEOUT,
+    )
+
+
+def dig_query(domain: str, record_type: str = "A", timeout: float | None = None) -> Result:
+    """指定记录类型的 DNS 查询（A/AAAA/CNAME/MX/TXT/NS）。"""
+    return shell.run(
+        ["dig", "+short", domain, record_type],
         timeout=timeout if timeout is not None else config.DIAG_TIMEOUT,
     )
 

@@ -882,6 +882,153 @@ async function renderWifi() {
   renderWifiContent();
 }
 
+// ---- dns ----
+
+let dnsData = null;
+
+function dnsResolverCard(r, idx) {
+  const div = document.createElement("div");
+  div.className = "dns-resolver";
+  const head = document.createElement("div");
+  head.className = "dns-resolver-head";
+  const title = document.createElement("span");
+  title.className = "dns-resolver-title";
+  title.textContent = I18N.t("dns.resolver") + " #" + (idx + 1) +
+    " · " + I18N.t(r.section === "scoped" ? "dns.scoped" : "dns.main");
+  head.appendChild(title);
+  div.appendChild(head);
+
+  const ns = r.nameservers && r.nameservers.length
+    ? r.nameservers.join(", ")
+    : "—";
+  const nsEl = document.createElement("div");
+  nsEl.className = "dns-resolver-ns";
+  const nsLabel = document.createElement("span");
+  nsLabel.className = "muted";
+  nsLabel.textContent = I18N.t("dns.nameserver") + ": ";
+  nsEl.appendChild(nsLabel);
+  nsEl.appendChild(document.createTextNode(ns));
+  div.appendChild(nsEl);
+
+  if (r.domain) {
+    const domEl = document.createElement("div");
+    domEl.className = "dns-resolver-domain";
+    const domLabel = document.createElement("span");
+    domLabel.className = "muted";
+    domLabel.textContent = "domain: ";
+    domEl.appendChild(domLabel);
+    domEl.appendChild(document.createTextNode(r.domain));
+    div.appendChild(domEl);
+  }
+
+  const meaningEl = document.createElement("div");
+  meaningEl.className = "dns-resolver-meaning";
+  meaningEl.textContent = r.meaning || "";
+  div.appendChild(meaningEl);
+
+  return div;
+}
+
+function renderDnsOverview() {
+  const wrap = document.getElementById("dns-overview");
+  wrap.textContent = "";
+  if (!dnsData || !dnsData.resolvers || !dnsData.resolvers.length) {
+    const el = document.createElement("div");
+    el.className = "muted";
+    el.textContent = I18N.t("dns.noResolver");
+    wrap.appendChild(el);
+    return;
+  }
+  dnsData.resolvers.forEach((r, i) => wrap.appendChild(dnsResolverCard(r, i)));
+
+  // per-service DNS settings
+  if (dnsData.services && dnsData.services.length) {
+    const svcTitle = document.createElement("div");
+    svcTitle.className = "dns-service-title";
+    svcTitle.textContent = I18N.t("dns.serviceDns");
+    wrap.appendChild(svcTitle);
+    dnsData.services.forEach((s) => {
+      const row = document.createElement("div");
+      row.className = "dns-service";
+      const name = document.createElement("span");
+      name.className = "dns-service-name";
+      name.textContent = s.service;
+      row.appendChild(name);
+      const servers = document.createElement("span");
+      servers.className = "dns-service-servers";
+      servers.textContent = s.servers && s.servers.length ? s.servers.join(", ") : "—";
+      row.appendChild(servers);
+      const meaning = document.createElement("span");
+      meaning.className = "dns-service-meaning muted";
+      meaning.textContent = s.meaning || "";
+      row.appendChild(meaning);
+      wrap.appendChild(row);
+    });
+  }
+}
+
+async function renderDns() {
+  if (!dnsData) {
+    const wrap = document.getElementById("dns-overview");
+    wrap.textContent = "";
+    const el = document.createElement("div");
+    el.className = "muted";
+    el.textContent = I18N.t("status.detecting");
+    wrap.appendChild(el);
+    try {
+      dnsData = await (await fetch("/api/dns")).json();
+    } catch (e) {
+      dnsData = null;
+    }
+  }
+  renderDnsOverview();
+}
+
+async function runDnsQuery() {
+  const domain = document.getElementById("dns-query-domain").value.trim();
+  const type = document.getElementById("dns-query-type").value;
+  const resultWrap = document.getElementById("dns-query-result");
+  if (!domain) {
+    resultWrap.textContent = "";
+    return;
+  }
+  resultWrap.textContent = I18N.t("status.detecting");
+  let data;
+  try {
+    const resp = await fetch("/api/dns/query", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-CSRF-Token": CSRF_TOKEN },
+      body: JSON.stringify({ domain: domain, type: type })
+    });
+    data = await resp.json();
+  } catch (e) {
+    data = null;
+  }
+  resultWrap.textContent = "";
+  if (!data || !data.ok) {
+    const el = document.createElement("div");
+    el.className = "muted";
+    el.textContent = I18N.t("dns.queryError");
+    resultWrap.appendChild(el);
+    return;
+  }
+  if (!data.results || !data.results.length) {
+    const el = document.createElement("div");
+    el.className = "muted";
+    el.textContent = I18N.t("dns.queryEmpty");
+    resultWrap.appendChild(el);
+    return;
+  }
+  // render query results with UI.table
+  UI.table.render(resultWrap, {
+    columns: [
+      { key: "value", label: data.type, sortable: false }
+    ],
+    rows: data.results.map((v) => ({ value: v })),
+    sortable: false
+  });
+}
+
 // ---- settings ----
 
 function showSaved() {
@@ -905,6 +1052,7 @@ function renderPage(page) {
   if (page === "interface") renderInterfaces();
   else if (page === "wifi") renderWifi();
   else if (page === "connection") renderConnections();
+  else if (page === "dns") renderDns();
   else if (page === "diagnostics") renderDiagnostics();
   else if (page === "settings") renderSettings();
   else renderStatus();
@@ -915,7 +1063,7 @@ function showPage(page) {
   document.querySelectorAll(".nav-item").forEach((n) => {
     n.classList.toggle("active", n.dataset.page === page);
   });
-  ["status", "interface", "wifi", "connection", "diagnostics", "settings"].forEach((p) => {
+  ["status", "interface", "wifi", "connection", "dns", "diagnostics", "settings"].forEach((p) => {
     document.getElementById("page-" + p).style.display = p === page ? "" : "none";
   });
   renderPage(page);
@@ -949,6 +1097,15 @@ document.getElementById("vg-chart").addEventListener("click", () => {
 document.getElementById("vg-table").addEventListener("click", () => {
   speedViewMode = "table";
   renderSpeed();
+});
+
+document.getElementById("dns-refresh").addEventListener("click", async () => {
+  dnsData = null;
+  renderDns();
+});
+document.getElementById("dns-query-btn").addEventListener("click", runDnsQuery);
+document.getElementById("dns-query-domain").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") runDnsQuery();
 });
 
 document.querySelectorAll('input[name="theme"]').forEach((r) => {
