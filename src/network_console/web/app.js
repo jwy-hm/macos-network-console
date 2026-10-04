@@ -666,7 +666,9 @@ function showToast(msg) {
     document.body.appendChild(el);
   }
   el.textContent = msg;
-  el.style.display = "";
+  // Set block explicitly, not "" : CSS has #toast { display:none }, so clearing
+  // the inline style would fall back to none and the toast would never show.
+  el.style.display = "block";
   clearTimeout(showToast._t);
   showToast._t = setTimeout(() => { el.style.display = "none"; }, 3000);
 }
