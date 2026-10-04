@@ -5,20 +5,27 @@
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
 版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
-## [Unreleased]
+## [1.0.0] - 2026-10-04
 
 ### Added
 
 - Wi-Fi 详情页：当前连接信息、信号质量分级（-50/-60/-70 四档）、已保存网络列表
 - 隐私模式后端化：隐私状态由后端进程持有，`/api/wifi/preferred` 不再接受客户端 `?privacy=` 参数
 - 隐私自查支持 `--history`（`make privacy-check-history`），扫描 git 全历史 commit message，堵住第三条泄漏通道
+- UI 组件库（`web/ui/`）：toast / modal / table 三个轻量组件，零依赖、全局 `UI` 命名空间
+- Top 100 网站测速：Tranco 榜单拉取（24h 缓存）+ 并发测速，图表 / 表格双视图
+- DNS 概览与记录查询：`scutil --dns` 多 resolver 解析 + 逐条解读，A/AAAA/CNAME/MX/TXT/NS 查询
+- 文档双语：README / SECURITY / CONTRIBUTING / PRIVACY / SECURITY-HYGIENE 英文主 + 中文副，ARCHITECTURE 中文主 + 英文副
 - `docs/SECURITY-HYGIENE.md`：分享前的敏感数据自查清单
 - `docs/INCIDENT-2026-10-04.md`：隐私标识泄漏事件记录
+- CODE_OF_CONDUCT（Contributor Covenant 2.1，中英双语）
 
 ### Changed
 
 - 隐私检查重写为 Python（`scripts/privacy_check.py`），修复四段 IPv4 正则漏抓的 bug，新增 `$USER` 动态黑名单
 - 网络接口页默认只显示有 IP 的接口，其余折叠
+- 连接页 / 接口页 / 诊断结果 / 已保存网络列表：系统命令输出改为 `textContent` / `createElement`，不再走 innerHTML 拼接
+- 显隐控制从 inline style 改为 class 驱动
 
 ### Fixed
 
@@ -26,6 +33,7 @@
 - 单线程 HTTP 服务被浏览器 keep-alive 长连接卡死（改用 ThreadingHTTPServer）
 - Wi-Fi 无定位权限时 SSID 显示 `<redacted>`（现在降级为 `—` + 授权指引）
 - 连接页同一进程多 fd 重复行（按四元组聚合计数）
+- toast 因 `display:none` 回落导致永不显示（显式 `block`）
 
 ## [0.1.0] - 2026-10-04
 
