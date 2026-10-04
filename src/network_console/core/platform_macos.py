@@ -114,6 +114,15 @@ def curl_http(url: str) -> Result:
     )
 
 
+def curl_text(url: str, user_agent: str = "Mozilla/5.0", max_time: int = 30, timeout: float | None = None) -> Result:
+    """拉取 URL 原始文本（如 Tranco 榜单 CSV）。返回完整响应体，供 api 层解析。"""
+    t = max_time
+    return shell.run(
+        ["curl", "-sS", "-A", user_agent, "--max-time", str(t), url],
+        timeout=timeout if timeout is not None else (t + 5),
+    )
+
+
 def curl_timing(url: str, max_time: int | None = None, timeout: float | None = None) -> Result:
     """HTTP 头 + 时间分解一次拿到：-D - 输出响应头，-w 输出各阶段耗时。"""
     wfmt = (
