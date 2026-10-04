@@ -198,19 +198,50 @@ function interfaceCard(item, maxBytes) {
   div.className = "iface " + (item.up ? "up" : "down");
   const addr = item.inet || item.inet6 || "\u2014";
   const mac = privacyOn() ? maskMac(item.mac) : item.mac;
-  div.innerHTML =
-    '<div class="row1"><div class="dot"></div><span class="iname">' +
-    item.name +
-    '</span><span class="istate">' +
-    I18N.t(item.up ? "interface.up" : "interface.down") +
-    '</span></div>' +
-    '<div class="row2"><span>' + addr + "</span>" +
-    (mac ? '<span class="imac">' + mac + "</span>" : "") +
-    '<span class="imtu">MTU ' + (item.mtu || "\u2014") + "</span></div>" +
-    '<div class="row3">' +
-    '<span class="traffic">\u2193 ' + humanBytes(item.ibytes) + " / \u2191 " + humanBytes(item.obytes) + "</span>" +
-    "</div>" +
-    trafficSvg(item.ibytes, item.obytes, maxBytes);
+
+  // system data (iface name/IP/MAC/MTU): build with createElement + textContent
+  const row1 = document.createElement("div");
+  row1.className = "row1";
+  const dot = document.createElement("div");
+  dot.className = "dot";
+  row1.appendChild(dot);
+  const iname = document.createElement("span");
+  iname.className = "iname";
+  iname.textContent = item.name;
+  row1.appendChild(iname);
+  const istate = document.createElement("span");
+  istate.className = "istate";
+  istate.textContent = I18N.t(item.up ? "interface.up" : "interface.down");
+  row1.appendChild(istate);
+  div.appendChild(row1);
+
+  const row2 = document.createElement("div");
+  row2.className = "row2";
+  const addrSpan = document.createElement("span");
+  addrSpan.textContent = addr;
+  row2.appendChild(addrSpan);
+  if (mac) {
+    const macSpan = document.createElement("span");
+    macSpan.className = "imac";
+    macSpan.textContent = mac;
+    row2.appendChild(macSpan);
+  }
+  const mtuSpan = document.createElement("span");
+  mtuSpan.className = "imtu";
+  mtuSpan.textContent = "MTU " + (item.mtu || "\u2014");
+  row2.appendChild(mtuSpan);
+  div.appendChild(row2);
+
+  const row3 = document.createElement("div");
+  row3.className = "row3";
+  const traffic = document.createElement("span");
+  traffic.className = "traffic";
+  traffic.textContent = "\u2193 " + humanBytes(item.ibytes) + " / \u2191 " + humanBytes(item.obytes);
+  row3.appendChild(traffic);
+  div.appendChild(row3);
+
+  // SVG is built from numbers only; insertAdjacentHTML is safe (no user input)
+  div.insertAdjacentHTML("beforeend", trafficSvg(item.ibytes, item.obytes, maxBytes));
   return div;
 }
 
@@ -293,18 +324,44 @@ function connFilter() {
 }
 
 function connCard(c) {
+  // system command output (proc/pid/addr): all textContent, no innerHTML injection
   const div = document.createElement("div");
   div.className = "conn" + (c.state === "LISTEN" ? " listen" : "");
-  const remote = c.remote ? " \u2192 " + c.remote : "";
-  const state = c.state ? '<span class="conn-state">' + escapeHtml(c.state) + "</span>" : "";
-  const count = c.count > 1 ? '<span class="conn-count">\u00d7' + c.count + "</span>" : "";
-  div.innerHTML =
-    '<span class="conn-proc">' + escapeHtml(c.command) + "</span>" +
-    '<span class="conn-pid">' + escapeHtml(c.pid) + "</span>" +
-    '<span class="conn-proto">' + escapeHtml(c.proto) + "</span>" +
-    '<span class="conn-addr">' + escapeHtml(c.local) + escapeHtml(remote) + "</span>" +
-    state +
-    count;
+
+  const proc = document.createElement("span");
+  proc.className = "conn-proc";
+  proc.textContent = c.command;
+  div.appendChild(proc);
+
+  const pid = document.createElement("span");
+  pid.className = "conn-pid";
+  pid.textContent = c.pid;
+  div.appendChild(pid);
+
+  const proto = document.createElement("span");
+  proto.className = "conn-proto";
+  proto.textContent = c.proto;
+  div.appendChild(proto);
+
+  const addr = document.createElement("span");
+  addr.className = "conn-addr";
+  addr.textContent = c.local + (c.remote ? " \u2192 " + c.remote : "");
+  div.appendChild(addr);
+
+  if (c.state) {
+    const state = document.createElement("span");
+    state.className = "conn-state";
+    state.textContent = c.state;
+    div.appendChild(state);
+  }
+
+  if (c.count > 1) {
+    const count = document.createElement("span");
+    count.className = "conn-count";
+    count.textContent = "\u00d7" + c.count;
+    div.appendChild(count);
+  }
+
   return div;
 }
 
@@ -415,19 +472,50 @@ function diagResultCard(r) {
       "s \u00b7 TLS " + (t.appconnect || "-") + "s \u00b7 TTFB " + (t.starttransfer || "-") + "s";
   }
   const summary = privacyOn() ? maskFakeIp(r.summary) : r.summary;
-  let warning = "";
-  if (r.warning) {
-    warning = '<div class="diag-warning">' + I18N.t("diag.warning." + r.warning) + "</div>";
+
+  // head: tool / target / summary (system output, all textContent)
+  const head = document.createElement("div");
+  head.className = "diag-result-head";
+  const toolEl = document.createElement("span");
+  toolEl.className = "diag-result-tool";
+  toolEl.textContent = r.tool;
+  head.appendChild(toolEl);
+  const targetEl = document.createElement("span");
+  targetEl.className = "diag-result-target";
+  targetEl.textContent = r.target;
+  head.appendChild(targetEl);
+  const summaryEl = document.createElement("span");
+  summaryEl.className = "diag-result-summary";
+  summaryEl.textContent = summary;
+  head.appendChild(summaryEl);
+  div.appendChild(head);
+
+  if (detail) {
+    const detailEl = document.createElement("div");
+    detailEl.className = "diag-result-detail";
+    detailEl.textContent = detail;
+    div.appendChild(detailEl);
   }
-  div.innerHTML =
-    '<div class="diag-result-head">' +
-    '<span class="diag-result-tool">' + escapeHtml(r.tool) + "</span>" +
-    '<span class="diag-result-target">' + escapeHtml(r.target) + "</span>" +
-    '<span class="diag-result-summary">' + escapeHtml(summary) + "</span>" +
-    "</div>" +
-    (detail ? '<div class="diag-result-detail">' + escapeHtml(detail) + "</div>" : "") +
-    warning +
-    (r.raw ? '<details class="diag-raw"><summary>' + I18N.t("diag.raw") + "</summary><pre>" + escapeHtml(r.raw) + "</pre></details>" : "");
+
+  if (r.warning) {
+    const warnEl = document.createElement("div");
+    warnEl.className = "diag-warning";
+    warnEl.textContent = I18N.t("diag.warning." + r.warning);
+    div.appendChild(warnEl);
+  }
+
+  if (r.raw) {
+    const detailsEl = document.createElement("details");
+    detailsEl.className = "diag-raw";
+    const summaryTag = document.createElement("summary");
+    summaryTag.textContent = I18N.t("diag.raw");
+    detailsEl.appendChild(summaryTag);
+    const pre = document.createElement("pre");
+    pre.textContent = r.raw; // raw command output; textContent prevents injection
+    detailsEl.appendChild(pre);
+    div.appendChild(detailsEl);
+  }
+
   return div;
 }
 
@@ -577,13 +665,13 @@ function renderWifiContent() {
         ssidRevealed ? wifiData.ssid : maskSsid(wifiData.ssid);
       revealBtn.textContent = ssidRevealed ? "\uD83D\uDC41" : "\uD83D\uDE48";
       if (ssidRevealed) {
-        showToast(I18N.t("wifi.reveal.toast"));
+        UI.toast(I18N.t("wifi.reveal.toast"), { type: "info" });
       }
     });
   }
   const permBtn = document.getElementById("wifi-perm-help");
   if (permBtn) {
-    permBtn.addEventListener("click", () => showToast(I18N.t("wifi.ssid.perm_path")));
+    permBtn.addEventListener("click", () => UI.toast(I18N.t("wifi.ssid.perm_path"), { type: "info" }));
   }
   renderPreferredSection();
 }
@@ -610,24 +698,42 @@ async function loadPreferred() {
 }
 
 function renderPreferredList(wrap) {
+  wrap.textContent = "";
   if (!preferredData) {
-    wrap.innerHTML = '<div class="muted">' + I18N.t("common.loadFailed") + "</div>";
+    const el = document.createElement("div");
+    el.className = "muted";
+    el.textContent = I18N.t("common.loadFailed");
+    wrap.appendChild(el);
     return;
   }
   if (preferredData.masked) {
-    wrap.innerHTML = '<div class="muted">' + I18N.t("wifi.preferred.masked") + "</div>";
+    const el = document.createElement("div");
+    el.className = "muted";
+    el.textContent = I18N.t("wifi.preferred.masked");
+    wrap.appendChild(el);
     return;
   }
   const nets = preferredData.networks || [];
-  let html = '<div class="wifi-preferred-title">' + I18N.t("wifi.preferred.title") + " (" + nets.length + ")</div>";
+  const title = document.createElement("div");
+  title.className = "wifi-preferred-title";
+  title.textContent = I18N.t("wifi.preferred.title") + " (" + nets.length + ")";
+  wrap.appendChild(title);
   if (!nets.length) {
-    html += '<div class="muted">' + I18N.t("wifi.preferred.empty") + "</div>";
+    const el = document.createElement("div");
+    el.className = "muted";
+    el.textContent = I18N.t("wifi.preferred.empty");
+    wrap.appendChild(el);
   } else {
-    html += '<div class="wifi-preferred-list">';
-    nets.forEach((n) => { html += '<span class="wifi-chip">' + escapeHtml(n) + "</span>"; });
-    html += "</div>";
+    const list = document.createElement("div");
+    list.className = "wifi-preferred-list";
+    nets.forEach((n) => {
+      const chip = document.createElement("span");
+      chip.className = "wifi-chip";
+      chip.textContent = n; // SSID system data; textContent prevents injection
+      list.appendChild(chip);
+    });
+    wrap.appendChild(list);
   }
-  wrap.innerHTML = html;
 }
 
 async function renderWifi() {
@@ -653,24 +759,9 @@ async function renderWifi() {
 function showSaved() {
   const el = document.getElementById("settings-saved");
   if (!el) return;
-  el.style.display = "";
+  el.classList.add("show");
   clearTimeout(showSaved._t);
-  showSaved._t = setTimeout(() => { el.style.display = "none"; }, 1500);
-}
-
-function showToast(msg) {
-  let el = document.getElementById("toast");
-  if (!el) {
-    el = document.createElement("div");
-    el.id = "toast";
-    document.body.appendChild(el);
-  }
-  el.textContent = msg;
-  // Set block explicitly, not "" : CSS has #toast { display:none }, so clearing
-  // the inline style would fall back to none and the toast would never show.
-  el.style.display = "block";
-  clearTimeout(showToast._t);
-  showToast._t = setTimeout(() => { el.style.display = "none"; }, 3000);
+  showSaved._t = setTimeout(() => { el.classList.remove("show"); }, 1500);
 }
 
 function renderSettings() {

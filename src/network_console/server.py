@@ -41,6 +41,10 @@ STATIC_FILES = {
     "/app.js": ("app.js", "application/javascript; charset=utf-8"),
     "/i18n.js": ("i18n.js", "application/javascript; charset=utf-8"),
     "/style.css": ("style.css", "text/css; charset=utf-8"),
+    "/ui/toast.js": ("ui/toast.js", "application/javascript; charset=utf-8"),
+    "/ui/modal.js": ("ui/modal.js", "application/javascript; charset=utf-8"),
+    "/ui/table.js": ("ui/table.js", "application/javascript; charset=utf-8"),
+    "/ui/ui.css": ("ui/ui.css", "text/css; charset=utf-8"),
 }
 
 
