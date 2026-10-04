@@ -175,7 +175,8 @@ body {
 .theme-picker label { display: flex; align-items: center; gap: 5px; font-size: 13px; cursor: pointer; }
 .theme-picker input { accent-color: var(--accent); }
 .setting-note { font-size: 12px; margin-top: 12px; line-height: 1.6; }
-.setting-saved { font-size: 12px; color: var(--ok); margin-top: 8px; }
+.setting-saved { display: none; font-size: 12px; color: var(--ok); margin-top: 8px; }
+.setting-saved.show { display: block; }
 
 /* 开关 */
 .switch { position: relative; display: inline-block; width: 44px; height: 24px; }

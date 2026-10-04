@@ -14,12 +14,22 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parent.parent
 WEB = REPO / "src" / "network_console" / "web"
 EXCLUDE = {"i18n.js"}
+# ui/ 是组件库，不是页面层：其注释和默认值（okText="确认" 等）由调用方决定 i18n，
+# 不在 i18n-check 的「页面文案必须进 i18n.js」约束范围内。
+EXCLUDE_DIRS = {"ui"}
+
+
+def _check_path(path: Path) -> bool:
+    """返回该路径是否应跳过（在 EXCLUDE_DIRS 下）。"""
+    return any(part in EXCLUDE_DIRS for part in path.relative_to(WEB).parts)
 
 _PATTERN = re.compile(r"[\u4e00-\u9fff]")
 failed = False
 
 for path in sorted(WEB.rglob("*")):
     if path.name in EXCLUDE or path.suffix not in (".js", ".html"):
+        continue
+    if _check_path(path):
         continue
     for i, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
         if _PATTERN.search(line):
