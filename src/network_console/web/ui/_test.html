@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>UI components self-test</title>
+<link rel="stylesheet" href="ui.css">
+<style>
+  #results { font-family: monospace; font-size: 13px; margin: 20px; }
+  #results .pass { color: #059669; }
+  #results .fail { color: #dc2626; }
+  #mount { display: none; }
+</style>
+</head>
+<body>
+<div id="results"></div>
+<div id="mount"></div>
+
+<script src="toast.js"></script>
+<script src="modal.js"></script>
+<script src="table.js"></script>
+<script>
+(function () {
+  "use strict";
+  const results = document.getElementById("results");
+  let passCount = 0;
+  let failCount = 0;
+  function assert(cond, msg) {
+    const el = document.createElement("div");
+    el.className = cond ? "pass" : "fail";
+    el.textContent = (cond ? "PASS: " : "FAIL: ") + msg;
+    results.appendChild(el);
+    if (cond) passCount++; else failCount++;
+  }
+  function summary() {
+    const el = document.createElement("div");
+    el.textContent = "\n" + passCount + " PASS / " + failCount + " FAIL";
+    el.style.fontWeight = "bold";
+    results.appendChild(el);
+  }
+
+  // ---------- toast (4) ----------
+  (function () {
+    // 1. 返回 {el, dismiss}
+    const t = UI.toast("测试", { duration: 0 });
+    assert(t && t.el && typeof t.dismiss === "function", "toast 返回 {el, dismiss}");
+
+    // 2. dismiss 幂等
+    t.dismiss();
+    t.dismiss();
+    assert(true, "toast dismiss 幂等（重复调用不抛错）");
+
+    // 3. 堆叠：超 5 删最早
+    const container = document.getElementById("toast-container");
+    for (let i = 0; i < 8; i++) { UI.toast("m" + i, { duration: 0 }); }
+    assert(container.children.length <= 5, "toast 堆叠上限 5（实际 " + container.children.length + "）");
+
+    // 4. duration: 0 不自动消失
+    const t4 = UI.toast("永久", { duration: 0 });
+    const countBefore = container.children.length;
+    setTimeout(() => {
+      assert(container.children.length === countBefore, "toast duration:0 不自动消失");
+      // 清理
+      container.textContent = "";
+      summary();
+    }, 100);
+  })();
+
+  // ---------- modal (5) ----------
+  (function () {
+    // 1. body/bodyNode 同传抛错
+    let threw = false;
+    try {
+      UI.modal.confirm({ body: "x", bodyNode: document.createElement("div") });
+    } catch (e) { threw = true; }
+    assert(threw, "modal body/bodyNode 同传抛错");
+
+    // 2. 渲染 overlay + title + body 文本
+    let okCalled = false, cancelCalled = false;
+    const m = UI.modal.confirm({
+      title: "标题", body: "正文", okText: "好", cancelText: "取消",
+      onOk: () => { okCalled = true; }, onCancel: () => { cancelCalled = true; }
+    });
+    const overlay = m.el;
+    assert(overlay && overlay.className.indexOf("modal-overlay") >= 0, "modal 渲染 overlay");
+    assert(overlay.querySelector(".modal-title").textContent === "标题", "modal 渲染 title");
+    assert(overlay.querySelector(".modal-body").textContent === "正文", "modal 渲染 body 文本");
+    assert(overlay.getAttribute("aria-labelledby") != null, "modal aria-labelledby 已设置");
+
+    // 3. 焦点陷阱：打开时焦点在 OK 按钮
+    assert(document.activeElement === overlay.querySelector(".modal-btn-primary"), "modal 打开时焦点在 OK 按钮");
+
+    // 4. Esc 触发 onCancel
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+    assert(cancelCalled, "modal Esc 触发 onCancel");
+    assert(!overlay.parentNode, "modal Esc 后 overlay 已移除");
+
+    // 5. 点 OK 触发 onOk + 弹窗移除
+    const m2 = UI.modal.confirm({
+      title: "t", body: "b",
+      onOk: () => { okCalled = true; }, onCancel: () => {}
+    });
+    m2.el.querySelector(".modal-btn-primary").click();
+    assert(okCalled, "modal 点 OK 触发 onOk");
+    assert(!m2.el.parentNode, "modal 点 OK 后 overlay 已移除");
+  })();
+
+  // ---------- table (4) ----------
+  (function () {
+    const mount = document.getElementById("mount");
+    const t = UI.table.render(mount, {
+      columns: [
+        { key: "name", label: "名称", sortable: true },
+        { key: "ms", label: "延迟", sortable: true,
+          sortValue: (r) => r.ms, format: (v) => v == null ? "—" : v + " ms" }
+      ],
+      rows: [
+        { name: "b.com", ms: 200 },
+        { name: "a.com", ms: null },
+        { name: "c.com", ms: 100 }
+      ],
+      sortable: true
+    });
+
+    // 1. 渲染出表格 + 表头 + 行
+    const table = t.el;
+    assert(table.tagName === "TABLE", "table 渲染 <table>");
+    assert(table.querySelectorAll("thead th").length === 2, "table 渲染表头 2 列");
+    assert(table.querySelectorAll("tbody tr").length === 3, "table 渲染 3 行");
+
+    // 2. 点表头排序（升序）：按 ms 升序，null 排最后
+    const msTh = table.querySelectorAll("thead th")[1];
+    msTh.click();
+    let cells = table.querySelectorAll("tbody tr td:first-child");
+    assert(cells[0].textContent === "c.com" && cells[2].textContent === "a.com",
+      "table 点表头按 ms 升序（null 排最后）");
+
+    // 3. render(rows) 保留排序（preserveSort 默认 true）
+    t.render([
+      { name: "z.com", ms: 50 },
+      { name: "y.com", ms: null }
+    ]);
+    cells = table.querySelectorAll("tbody tr td:first-child");
+    assert(cells[0].textContent === "z.com", "table render(rows) 保留上次排序（ms 升序）");
+
+    // 4. render(rows, {preserveSort:false}) 重置排序 → 恢复原始顺序
+    t.render([
+      { name: "z.com", ms: 50 },
+      { name: "y.com", ms: null }
+    ], { preserveSort: false });
+    cells = table.querySelectorAll("tbody tr td:first-child");
+    assert(cells[0].textContent === "z.com" && cells[1].textContent === "y.com",
+      "table render(preserveSort:false) 重置排序");
+  })();
+})();
+</script>
+</body>
+</html>

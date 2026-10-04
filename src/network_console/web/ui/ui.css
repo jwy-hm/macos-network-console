@@ -1,0 +1,139 @@
+/* ui.css —— 三组件（toast / modal / table）合一的样式
+   视觉沿用 Apple 风，复用全局 CSS 变量（--card / --line / --accent / --ink / --bg / --muted / --ok / --warn / --bad）。 */
+
+/* ---------- toast ---------- */
+#toast-container {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 200;
+  max-width: 80vw;
+}
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  font-size: 13px;
+  color: var(--ink);
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+.toast.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+.toast-icon {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+}
+.toast-info .toast-icon { background: var(--muted); }
+.toast-success .toast-icon { background: var(--ok); }
+.toast-warn .toast-icon { background: var(--warn); }
+.toast-error .toast-icon { background: var(--bad); }
+.toast-text { min-width: 0; word-break: break-word; }
+
+/* ---------- modal ---------- */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 300;
+}
+.modal {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 20px;
+  min-width: 320px;
+  max-width: 480px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.24);
+}
+.modal-title {
+  font-size: 15px;
+  font-weight: 650;
+  margin-bottom: 10px;
+}
+.modal-body {
+  font-size: 13px;
+  color: var(--ink);
+  line-height: 1.6;
+  margin-bottom: 16px;
+  white-space: pre-wrap;
+}
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+/* 用 .modal-btn-primary 而非裸 .btn-primary，避免污染全局按钮类 */
+.modal-btn-primary {
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: #fff;
+  border-radius: 8px;
+  padding: 6px 14px;
+  font-size: 13px;
+  cursor: pointer;
+  font-family: inherit;
+}
+.modal-btn-primary:hover { background: var(--accent-hover); }
+
+/* ---------- table ---------- */
+/* border-collapse: separate + border-spacing: 0 —— Safari 对 border-collapse
+   配合 thead position: sticky 有历史 bug，separate 是更稳妥的退化方案 */
+.ui-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 13px;
+}
+.ui-table tbody td {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--line);
+  color: var(--ink);
+}
+.ui-table thead th {
+  text-align: left;
+  font-weight: 650;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--line);
+  background: var(--card);
+}
+.ui-table.sticky thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+.ui-table thead th.sortable {
+  cursor: pointer;
+  user-select: none;
+}
+.ui-table thead th.sorted-asc::after { content: " ↑"; color: var(--accent); }
+.ui-table thead th.sorted-desc::after { content: " ↓"; color: var(--accent); }
+.ui-table tbody tr.clickable { cursor: pointer; }
+.ui-table tbody tr.clickable:hover { background: var(--line); }
+.ui-table-empty {
+  text-align: center;
+  color: var(--muted);
+  padding: 16px !important;
+}
