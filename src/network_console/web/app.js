@@ -570,6 +570,134 @@ async function runDiag(toolId) {
   renderDiagResults();
 }
 
+// ---- top 100 speed test ----
+
+let speedResults = [];
+let speedViewMode = "chart"; // "chart" | "table"
+
+function speedClassify(r) {
+  if (!r.ok) return { cls: "fail", label: I18N.t("speed.failed") };
+  if (r.ms == null) return { cls: "fail", label: I18N.t("speed.timeout") };
+  if (r.ms < 500) return { cls: "fast", label: I18N.t("speed.normal") };
+  if (r.ms < 2000) return { cls: "mid", label: I18N.t("speed.slow") };
+  return { cls: "slow", label: I18N.t("speed.verySlow") };
+}
+
+function speedChartBars(results) {
+  const sorted = [...results].sort((a, b) => {
+    const ma = a.ok && a.ms != null ? a.ms : 1e9;
+    const mb = b.ok && b.ms != null ? b.ms : 1e9;
+    return ma - mb;
+  });
+  const okms = sorted.filter((r) => r.ok && r.ms != null).map((r) => r.ms);
+  const max = Math.max(3000, ...okms);
+
+  const wrap = document.createElement("div");
+  sorted.forEach((r) => {
+    const c = speedClassify(r);
+    const pct = c.ms != null ? Math.max(1, (c.ms / max) * 100) : 1;
+    const val = !r.ok ? I18N.t("speed.timeout") : (c.ms != null ? c.ms + " ms" : "\u2014");
+
+    const row = document.createElement("div");
+    row.className = "chart-row";
+
+    const label = document.createElement("a");
+    label.className = "chart-label";
+    label.href = "https://" + r.domain;
+    label.target = "_blank";
+    label.rel = "noopener";
+    label.textContent = r.domain;
+    row.appendChild(label);
+
+    const track = document.createElement("div");
+    track.className = "chart-track";
+    const bar = document.createElement("div");
+    bar.className = "chart-bar bar-" + c.cls;
+    bar.style.width = pct + "%";
+    track.appendChild(bar);
+    row.appendChild(track);
+
+    const valEl = document.createElement("span");
+    valEl.className = "chart-val";
+    valEl.textContent = val;
+    row.appendChild(valEl);
+
+    wrap.appendChild(row);
+  });
+  return wrap;
+}
+
+function renderSpeed() {
+  const wrap = document.getElementById("speed-result");
+  wrap.textContent = "";
+  if (!speedResults.length) {
+    const el = document.createElement("div");
+    el.className = "muted";
+    el.textContent = I18N.t("speed.noResult");
+    wrap.appendChild(el);
+    return;
+  }
+  document.getElementById("vg-chart").classList.toggle("on", speedViewMode === "chart");
+  document.getElementById("vg-table").classList.toggle("on", speedViewMode === "table");
+
+  if (speedViewMode === "chart") {
+    wrap.appendChild(speedChartBars(speedResults));
+  } else {
+    UI.table.render(wrap, {
+      columns: [
+        { key: "domain", label: I18N.t("speed.domain"), sortable: true },
+        { key: "state", label: I18N.t("speed.state"), sortable: false,
+          format: (v, row) => speedClassify(row).label },
+        { key: "status", label: I18N.t("speed.code"), sortable: false,
+          format: (v) => v === "000" ? I18N.t("speed.timeout") : "HTTP " + v },
+        { key: "ms", label: I18N.t("speed.latency"), sortable: true,
+          sortValue: (row) => row.ok && row.ms != null ? row.ms : Infinity,
+          format: (v, row) => !row.ok ? "\u2014" : (v != null ? v + " ms" : "\u2014") }
+      ],
+      rows: speedResults,
+      sortable: true
+    });
+  }
+}
+
+async function pingTopSites(domains) {
+  const statusEl = document.getElementById("speed-status");
+  statusEl.textContent = I18N.t("speed.testing").replace("{n}", domains.length);
+  const wrap = document.getElementById("speed-result");
+  wrap.textContent = "";
+  try {
+    const resp = await fetch("/api/ping", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-CSRF-Token": CSRF_TOKEN },
+      body: JSON.stringify({ domains: domains })
+    });
+    const data = await resp.json();
+    speedResults = data.results || [];
+  } catch (e) {
+    speedResults = [];
+  }
+  statusEl.textContent = "";
+  renderSpeed();
+}
+
+async function runTop100() {
+  const statusEl = document.getElementById("speed-status");
+  statusEl.textContent = I18N.t("speed.pulling");
+  const wrap = document.getElementById("speed-result");
+  wrap.textContent = "";
+  try {
+    const resp = await fetch("/api/topsites");
+    const data = await resp.json();
+    if (!data.ok || !data.domains || !data.domains.length) {
+      statusEl.textContent = I18N.t("speed.fail");
+      return;
+    }
+    await pingTopSites(data.domains.slice(0, 100));
+  } catch (e) {
+    statusEl.textContent = I18N.t("speed.fail");
+  }
+}
+
 // ---- wifi ----
 
 let wifiData = null;
@@ -811,6 +939,16 @@ document.getElementById("conn-filter-port").addEventListener("input", renderConn
 document.getElementById("diag-clear").addEventListener("click", () => {
   diagHistory = [];
   renderDiagResults();
+});
+
+document.getElementById("btn-top100").addEventListener("click", runTop100);
+document.getElementById("vg-chart").addEventListener("click", () => {
+  speedViewMode = "chart";
+  renderSpeed();
+});
+document.getElementById("vg-table").addEventListener("click", () => {
+  speedViewMode = "table";
+  renderSpeed();
 });
 
 document.querySelectorAll('input[name="theme"]').forEach((r) => {

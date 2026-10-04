@@ -206,10 +206,20 @@ body {
 .wifi-preferred-list { display: flex; flex-wrap: wrap; gap: 6px; }
 .wifi-chip { font-size: 12px; padding: 3px 8px; border-radius: 12px; background: var(--line); color: var(--ink); }
 
-/* 提示气泡（toast） */
-#toast {
-  position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
-  background: var(--ink); color: var(--bg); padding: 8px 16px; border-radius: 8px;
-  font-size: 13px; box-shadow: 0 4px 16px rgba(0,0,0,0.18); z-index: 100;
-  display: none; max-width: 80vw;
-}
+/* Top 100 测速 */
+.topsites-block { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--line); }
+.topsites-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.topsites-head #speed-status { font-size: 12px; }
+.topsites-view { display: flex; gap: 6px; margin-bottom: 8px; }
+.btn-mini { padding: 2px 8px; font-size: 12px; }
+.topsites-view .on { border-color: var(--accent); color: var(--accent); }
+.chart-row { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; font-size: 13px; }
+.chart-label { width: 180px; text-align: right; color: var(--ink); text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex-shrink: 0; }
+.chart-label:hover { color: var(--accent); text-decoration: underline; }
+.chart-track { flex: 1; background: var(--line); border-radius: 4px; height: 14px; overflow: hidden; }
+.chart-bar { height: 100%; border-radius: 4px; min-width: 2px; }
+.bar-fast { background: var(--ok); }
+.bar-mid { background: var(--warn); }
+.bar-slow { background: var(--bad); }
+.bar-fail { background: var(--muted); }
+.chart-val { width: 80px; font-variant-numeric: tabular-nums; color: var(--muted); flex-shrink: 0; }
