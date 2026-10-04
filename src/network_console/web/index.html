@@ -25,6 +25,7 @@
       <div class="nav-item" data-page="interface" data-i18n="nav.interfaces"></div>
       <div class="nav-item" data-page="wifi" data-i18n="nav.wifi"></div>
       <div class="nav-item" data-page="connection" data-i18n="nav.connections"></div>
+      <div class="nav-item" data-page="dns" data-i18n="nav.dns"></div>
       <div class="nav-item" data-page="diagnostics" data-i18n="nav.diagnostics"></div>
       <div class="nav-item" data-page="settings" data-i18n="nav.settings"></div>
     </nav>
@@ -70,6 +71,32 @@
         </div>
         <div id="conn-meta" class="muted"></div>
         <div id="conn-list"></div>
+      </div>
+    </section>
+
+    <section id="page-dns" class="page" style="display:none">
+      <div class="card">
+        <div class="card-head">
+          <h2 data-i18n="dns.title"></h2>
+          <button id="dns-refresh" class="btn-ghost" data-i18n="common.refresh"></button>
+        </div>
+        <div id="dns-overview"></div>
+        <div class="dns-query">
+          <div class="dns-query-head" data-i18n="dns.queryTitle"></div>
+          <div class="dns-query-form">
+            <input id="dns-query-domain" class="input" data-i18n-ph="dns.queryPlaceholder" autocomplete="off">
+            <select id="dns-query-type" class="input">
+              <option value="A">A</option>
+              <option value="AAAA">AAAA</option>
+              <option value="CNAME">CNAME</option>
+              <option value="MX">MX</option>
+              <option value="TXT">TXT</option>
+              <option value="NS">NS</option>
+            </select>
+            <button id="dns-query-btn" class="btn-ghost" data-i18n="dns.queryBtn"></button>
+          </div>
+          <div id="dns-query-result"></div>
+        </div>
       </div>
     </section>
 

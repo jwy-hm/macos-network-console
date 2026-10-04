@@ -223,3 +223,21 @@ body {
 .bar-slow { background: var(--bad); }
 .bar-fail { background: var(--muted); }
 .chart-val { width: 80px; font-variant-numeric: tabular-nums; color: var(--muted); flex-shrink: 0; }
+
+/* DNS 概览 */
+.dns-resolver { padding: 10px 0; border-bottom: 1px solid var(--line); font-size: 13px; }
+.dns-resolver-head { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.dns-resolver-title { font-weight: 650; }
+.dns-resolver-ns { font-variant-numeric: tabular-nums; margin-bottom: 2px; }
+.dns-resolver-domain { font-variant-numeric: tabular-nums; margin-bottom: 2px; }
+.dns-resolver-meaning { color: var(--accent); font-size: 12px; margin-top: 4px; }
+.dns-service-title { font-weight: 650; margin: 14px 0 6px; font-size: 13px; }
+.dns-service { display: flex; flex-wrap: wrap; gap: 8px 12px; padding: 6px 0; border-bottom: 1px solid var(--line); font-size: 13px; align-items: baseline; }
+.dns-service-name { font-weight: 600; min-width: 120px; }
+.dns-service-servers { font-variant-numeric: tabular-nums; }
+.dns-service-meaning { font-size: 12px; }
+.dns-query { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line); }
+.dns-query-head { font-weight: 650; margin-bottom: 8px; font-size: 13px; }
+.dns-query-form { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.dns-query-form .input { flex: 1; min-width: 160px; }
+#dns-query-result { margin-top: 10px; }
