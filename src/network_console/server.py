@@ -21,6 +21,7 @@ from network_console.api import diagnostics as diagnostics_api
 from network_console.api import interface as interface_api
 from network_console.api import settings as settings_api
 from network_console.api import status as status_api
+from network_console.api import topsites as topsites_api
 from network_console.api import wifi as wifi_api
 
 WEB_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "web")
@@ -131,6 +132,9 @@ class Handler(BaseHTTPRequestHandler):
             self._send_json(200, wifi_api.get_wifi())
         elif self.path.split("?", 1)[0] == "/api/wifi/preferred":
             self._send_json(200, wifi_api.get_preferred_networks())
+        elif self.path.split("?", 1)[0] == "/api/topsites":
+            force = "refresh=1" in self.path
+            self._send_json(200, topsites_api.get_topsites(100, force))
         elif self.path == "/api/settings/privacy":
             self._send_json(200, settings_api.get_privacy())
         elif self.path in ("/", "/index.html"):
@@ -164,6 +168,16 @@ class Handler(BaseHTTPRequestHandler):
                 return
             result = settings_api.set_privacy(bool(body.get("enabled", False)))
             self._send_json(200, result)
+            return
+        if self.path == "/api/ping":
+            body = self._read_json_body(length)
+            if body is None:
+                return
+            domains = body.get("domains", [])
+            if not isinstance(domains, list):
+                self._send_json(400, {"ok": False, "error": "domains 须为数组"})
+                return
+            self._send_json(200, topsites_api.run_ping([str(d) for d in domains]))
             return
         self._send_json(404, {"ok": False, "error": "not found"})
 
